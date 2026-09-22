@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: "npm" # Dependabot supports pnpm workspaces via the npm ecosystem identifier
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(deps)"
+    labels:
+      - "dependencies"
+      - "security"
+    ignore:
+      # Optional: Ignore specific major versions if you have known breaking changes you aren't ready for
+      # - dependency-name: "some-lib"
+      #   versions: ["> 2.0.0"]
