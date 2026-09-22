@@ -1,0 +1,28 @@
+{
+  "name": "@aetherion/cli",
+  "version": "1.0.0",
+  "description": "CLI for Aetherion Framework",
+  "bin": {
+    "aetherion": "dist/bin/aetherion.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aetherion/docs": "workspace:*",
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "fs-extra": "^11.1.1",
+    "ora": "^5.4.1",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@aetherion/core": "workspace:*",
+    "@aetherion/infra": "workspace:*",
+    "@types/fs-extra": "^11.0.1",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

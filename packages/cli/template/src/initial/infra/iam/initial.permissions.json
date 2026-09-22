@@ -1,0 +1,18 @@
+{
+  "initialHealth": {
+    "logs": [
+      {
+        "action": "logs:CreateLogGroup",
+        "resource": "*"
+      },
+      {
+        "action": "logs:CreateLogStream",
+        "resource": "*"
+      },
+      {
+        "action": "logs:PutLogEvents",
+        "resource": "*"
+      }
+    ]
+  }
+}
