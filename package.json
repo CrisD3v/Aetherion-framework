@@ -1,0 +1,14 @@
+{
+  "name": "aetherion-framework",
+  "version": "1.0.0",
+  "description": "Serverless Framework based on TypeScript, CDKTF and Decorators",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
