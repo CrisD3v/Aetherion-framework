@@ -139,3 +139,6 @@ terraform.tfstate*
 
 # Aetherion Local test
 .test-run/
+
+# Agent configuration
+.agent/
