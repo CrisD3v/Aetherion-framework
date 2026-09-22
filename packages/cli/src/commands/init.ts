@@ -37,9 +37,9 @@ export async function initCommand(projectName: string) {
         "test": "vitest run"
       },
       dependencies: {
-        "@aetherion/core": "latest",
-        "@aetherion/infra": "latest",
-        "@aetherion/docs": "latest"
+        "@aetherionfw/core": "latest",
+        "@aetherionfw/infra": "latest",
+        "@aetherionfw/docs": "latest"
       },
       devDependencies: {
         "typescript": "^5.5.4",

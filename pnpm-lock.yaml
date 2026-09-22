@@ -14,7 +14,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@aetherion/docs':
+      '@aetherionfw/docs':
         specifier: workspace:*
         version: link:../docs
       chalk:
@@ -33,10 +33,10 @@ importers:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.43)(typescript@5.9.3)
     devDependencies:
-      '@aetherion/core':
+      '@aetherionfw/core':
         specifier: workspace:*
         version: link:../core
-      '@aetherion/infra':
+      '@aetherionfw/infra':
         specifier: workspace:*
         version: link:../infra
       '@types/fs-extra':
@@ -67,7 +67,7 @@ importers:
 
   packages/docs:
     dependencies:
-      '@aetherion/core':
+      '@aetherionfw/core':
         specifier: workspace:*
         version: link:../core
       express:
@@ -86,7 +86,7 @@ importers:
 
   packages/infra:
     dependencies:
-      '@aetherion/core':
+      '@aetherionfw/core':
         specifier: workspace:*
         version: link:../core
       '@cdktf/provider-aws':

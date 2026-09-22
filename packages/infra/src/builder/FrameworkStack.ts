@@ -14,7 +14,7 @@ import { IamRolePolicy } from '@cdktf/provider-aws/lib/iam-role-policy';
 import { DbInstance } from '@cdktf/provider-aws/lib/db-instance';
 import { LambdaFunction } from '@cdktf/provider-aws/lib/lambda-function';
 import { LambdaEventSourceMapping } from '@cdktf/provider-aws/lib/lambda-event-source-mapping';
-import { MetadataRegistry } from '@aetherion/core';
+import { MetadataRegistry } from '@aetherionfw/core';
 
 export class FrameworkStack extends TerraformStack {
   constructor(scope: Construct, id: string) {

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@aetherion/docs';
+import { ApiProperty } from '@aetherionfw/docs';
 import { InitialHealth } from '../domain/initial-health.entity';
 
 export class InitialHealthResponseDto {

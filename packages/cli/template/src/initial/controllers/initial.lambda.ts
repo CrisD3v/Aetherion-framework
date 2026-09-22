@@ -3,12 +3,12 @@ import {
   Handle,
   Route,
   IamPermissions,
-} from '@aetherion/core';
+} from '@aetherionfw/core';
 import {
   ApiTag,
   ApiOperation,
   ApiResponse,
-} from '@aetherion/docs';
+} from '@aetherionfw/docs';
 import { InitialHealthService } from '../application/initial-health.service';
 import { InitialHealthResponseDto } from '../dto/initial-health.response.dto';
 import initialIamPermissions from '../infra/iam/initial.permissions.json';

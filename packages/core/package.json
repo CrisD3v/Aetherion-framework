@@ -1,5 +1,5 @@
 {
-  "name": "@aetherion/core",
+  "name": "@aetherionfw/core",
   "version": "1.0.0",
   "description": "Core decorators and runtime for Aetherion Framework",
   "main": "dist/index.js",
@@ -14,5 +14,15 @@
   "devDependencies": {
     "@types/node": "^20.19.43",
     "typescript": "^5.5.4"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "author": "CrisD3v",
+  "license": "MIT"
 }

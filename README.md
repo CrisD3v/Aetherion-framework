@@ -31,7 +31,7 @@ Initialize a new Aetherion project using the CLI:
 
 ```bash
 # Install the CLI globally (if published, otherwise use npx)
-npm install -g @aetherion/cli
+npm install -g @aetherionfw/cli
 
 # Scaffold a new project
 aetherion init my-serverless-api
@@ -50,8 +50,8 @@ aetherion docs --serve
 Aetherion brings a familiar, NestJS-like developer experience to Serverless.
 
 ```typescript
-import { LambdaController, Handle, Route, IamPermissions } from '@aetherion/core';
-import { ApiTag, ApiOperation, ApiResponse } from '@aetherion/docs';
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import { ApiTag, ApiOperation, ApiResponse } from '@aetherionfw/docs';
 
 @ApiTag('Users', 'User management endpoints')
 @LambdaController({

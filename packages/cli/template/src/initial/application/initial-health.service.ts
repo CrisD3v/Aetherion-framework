@@ -1,4 +1,4 @@
-import { Injectable } from '@aetherion/core';
+import { Injectable } from '@aetherionfw/core';
 import { InitialHealth } from '../domain/initial-health.entity';
 
 @Injectable()

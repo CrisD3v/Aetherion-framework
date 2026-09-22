@@ -2,7 +2,7 @@
 import '../src/app.module';
 
 import { App } from 'cdktf';
-import { FrameworkStack } from '@aetherion/infra';
+import { FrameworkStack } from '@aetherionfw/infra';
 
 const app = new App();
 // This automatically synthesizes all Lambdas, API Gateways, etc.

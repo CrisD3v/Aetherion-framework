@@ -1,4 +1,4 @@
-import { Infra } from '@aetherion/core';
+import { Infra } from '@aetherionfw/core';
 // Using generic HttpApi decorators if available, or just mocking for the template
 // Since we only added standard decorators like @Vpc, @S3Bucket, etc. earlier, we'll use a placeholder or generic @Infra config
 

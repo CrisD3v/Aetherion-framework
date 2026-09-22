@@ -1,4 +1,4 @@
-import { Module } from '@aetherion/core';
+import { Module } from '@aetherionfw/core';
 import { InitialModule } from './initial/initial.module';
 
 @Module({

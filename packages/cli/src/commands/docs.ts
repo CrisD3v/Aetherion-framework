@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import ora from 'ora';
-// Assuming the CLI runs in an environment where @aetherion/docs is accessible
+// Assuming the CLI runs in an environment where @aetherionfw/docs is accessible
 // For a global CLI, we might need to dynamically import it from the user's workspace
-import { generateStaticDocs, startScalarServer } from '@aetherion/docs';
+import { generateStaticDocs, startScalarServer } from '@aetherionfw/docs';
 
 import * as path from 'path';
 import * as fs from 'fs';

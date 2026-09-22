@@ -1,4 +1,4 @@
-import { MetadataRegistry } from '@aetherion/core';
+import { MetadataRegistry } from '@aetherionfw/core';
 import { DocsRegistry } from '../registry/DocsRegistry';
 
 export class OpenApiBuilder {
