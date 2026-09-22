@@ -1,0 +1,12 @@
+{
+  "language": "typescript",
+  "app": "pnpm run build && node dist/main.js",
+  "projectId": "aetherion-infra",
+  "sendCrashReports": "false",
+  "terraformProviders": [],
+  "terraformModules": [],
+  "context": {
+    "excludeStackIdFromLogicalIds": "true",
+    "allowSepCharsInLogicalIds": "true"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@aetherion/infra",
+  "version": "1.0.0",
+  "description": "CDKTF Builder for Aetherion Framework",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "synth": "cdktf synth",
+    "deploy": "cdktf deploy",
+    "clean": "rm -rf dist cdktf.out"
+  },
+  "dependencies": {
+    "@aetherion/core": "workspace:*",
+    "cdktf": "^0.20.0",
+    "constructs": "^10.3.0",
+    "@cdktf/provider-aws": "^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
