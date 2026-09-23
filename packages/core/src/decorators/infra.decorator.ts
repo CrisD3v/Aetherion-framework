@@ -1,4 +1,4 @@
-import { MetadataRegistry, InfraMetadata } from '../registry/MetadataRegistry';
+import { MetadataRegistry, InfraMetadata, ApiGatewayMetadata } from '../registry/MetadataRegistry';
 
 export function Infra(): ClassDecorator {
   return (target: any) => {
@@ -111,6 +111,16 @@ export function RdsInstance(props: { engine: string; size: string; dbName: strin
   return (target: any, propertyKey: string | symbol) => {
     MetadataRegistry.getInstance().registerInfraResource(target.constructor, {
       type: 'RdsInstance',
+      name: String(propertyKey),
+      props
+    });
+  };
+}
+
+export function ApiGateway(props: ApiGatewayMetadata): PropertyDecorator {
+  return (target: any, propertyKey: string | symbol) => {
+    MetadataRegistry.getInstance().registerInfraResource(target.constructor, {
+      type: 'ApiGateway',
       name: String(propertyKey),
       props
     });
