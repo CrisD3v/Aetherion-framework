@@ -14,6 +14,7 @@ export interface ControllerMetadata {
   memorySize?: number;
   timeout?: number;
   layers?: string[];
+  apiGateway?: string;
 }
 
 export interface RouteMetadata {
@@ -44,6 +45,17 @@ export interface InfraMetadata {
   type: string;
   name: string;
   props: any;
+}
+
+export interface ApiGatewayMetadata {
+  name: string;
+  type: 'REST' | 'HTTP';
+  description?: string;
+  existingApiId?: string;
+  existingRootResourceId?: string;
+  stageName?: string;
+  corsEnabled?: boolean;
+  corsOrigins?: string[];
 }
 
 export class MetadataRegistry {
