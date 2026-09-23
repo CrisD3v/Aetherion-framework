@@ -1,0 +1,38 @@
+---
+title: Redes VPC
+description: Aprovisionamiento de redes privadas usando Aetherion.
+---
+
+Aetherion te permite aprovisionar Virtual Private Clouds (VPCs) personalizadas de forma nativa usando el decorador `@Vpc`.
+
+## Aprovisionando una VPC
+
+Para crear una nueva VPC, usa el decorador de propiedad `@Vpc` dentro de una clase `@Infra()`. Debes definir un bloque CIDR IPv4 válido.
+
+```typescript
+// src/infra/network.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { Vpc } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class NetworkInfra {
+  
+  @Vpc({ 
+    name: 'aetherion-vpc',
+    cidr: '10.0.0.0/16',
+    natGateways: 1 // Opcional: Aprovisiona NAT Gateways para acceso a internet en subredes privadas
+  })
+  mainVpc!: any;
+}
+```
+
+Aetherion generará automáticamente la VPC junto con soporte DNS, nombres de host DNS, y todas las subredes y tablas de enrutamiento requeridas.
+
+## VPC y Lambdas
+
+Si aprovisionas recursos como `@RdsInstance` o ElastiCache que deben residir dentro de una VPC, tus funciones Lambda también necesitarán ser ubicadas dentro de esa VPC para poder comunicarse con ellos.
+
+Actualmente, si necesitas adjuntar una función Lambda a una VPC personalizada, debes definir manualmente la configuración de la VPC en tus overrides del constructor CDKTF o a través de las configuraciones avanzadas de Aetherion.
+
+> [!WARNING]
+> Colocar una función Lambda dentro de una VPC incrementa significativamente su tiempo de arranque en frío (debido a la creación de Elastic Network Interfaces) y limita su acceso a internet de salida a menos que se aprovisione un NAT Gateway.

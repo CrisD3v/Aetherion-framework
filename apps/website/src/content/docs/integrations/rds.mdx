@@ -1,0 +1,61 @@
+---
+title: RDS Instances
+description: Provisioning Relational Database Service (RDS) instances.
+---
+
+For applications that require relational databases like PostgreSQL or MySQL, Aetherion provides the `@RdsInstance` infrastructure decorator.
+
+## Provisioning an RDS Instance
+
+To provision a database, use the `@RdsInstance` decorator inside an `@Infra()` class.
+
+```typescript
+// src/infra/database.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { RdsInstance } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class DatabaseInfra {
+  
+  @RdsInstance({ 
+    engine: 'postgres', 
+    size: 'db.t3.micro', 
+    dbName: 'aetherion_db' 
+  })
+  mainDatabase!: any;
+}
+```
+
+When you deploy, Aetherion's CDKTF builder provisions the database instance within your VPC. By default, `skipFinalSnapshot` is set to `true` for development environments.
+
+## Connecting to RDS
+
+Because RDS instances reside inside a VPC, any Lambda function that needs to connect to the database must also be deployed inside the same VPC (or a peered VPC).
+
+*Note: In the current version of Aetherion, VPC configuration for Lambdas must be handled carefully. It is recommended to use connection pooling tools like AWS RDS Proxy or Prisma Accelerate if your Lambdas experience high concurrency.*
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+import { Client } from 'pg';
+
+@LambdaController({ lambdaName: 'reports-api' })
+export class ReportsController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/reports' })
+  async getReports() {
+    const client = new Client({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: 'aetherion_db',
+    });
+    
+    await client.connect();
+    const res = await client.query('SELECT * FROM reports');
+    await client.end();
+    
+    return res.rows;
+  }
+}
+```

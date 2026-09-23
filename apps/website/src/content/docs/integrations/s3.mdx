@@ -1,0 +1,57 @@
+---
+title: S3 Buckets
+description: Provisioning and interacting with Amazon S3.
+---
+
+
+Aetherion allows you to provision S3 buckets natively through your application code using the `@Infra` decorators.
+
+## Provisioning a Bucket
+
+To provision an S3 bucket, use the `@S3Bucket` property decorator inside a class annotated with `@Infra()`.
+
+```typescript
+// src/infra/storage.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { S3Bucket } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class StorageInfra {
+  
+  @S3Bucket({ name: 'my-app-uploads', versioned: true, private: true })
+  uploadsBucket!: any;
+}
+```
+
+When you deploy, Aetherion will automatically generate the CDKTF equivalent of this bucket and provision it in your AWS account. Make sure to include `StorageInfra` in your `@Module()` declaration!
+
+## Reading and Writing
+
+Because Aetherion runs standard Node.js on AWS Lambda, you can interact with the bucket using the official AWS SDK (`@aws-sdk/client-s3`).
+
+Just ensure you grant your controller method the correct `@IamPermissions`.
+
+```typescript
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+@LambdaController({ lambdaName: 'upload-api' })
+export class UploadController {
+  private s3 = new S3Client({});
+
+  @Handle()
+  @Route({ method: 'POST', path: '/upload' })
+  @IamPermissions({
+    actions: ['s3:PutObject'],
+    resources: ['arn:aws:s3:::my-app-uploads/*']
+  })
+  async handleUpload(event: any) {
+    await this.s3.send(new PutObjectCommand({
+      Bucket: 'my-app-uploads',
+      Key: `file-${Date.now()}.txt`,
+      Body: event.body
+    }));
+    return { success: true };
+  }
+}
+```

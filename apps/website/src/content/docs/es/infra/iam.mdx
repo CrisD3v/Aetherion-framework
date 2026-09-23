@@ -1,0 +1,44 @@
+---
+title: Permisos IAM
+description: Seguridad de menor privilegio forzada nativamente vía decoradores.
+---
+
+
+Debido a que Aetherion crea un mapeo 1:1 entre los métodos del controlador y las funciones Lambda, también puede crear **roles IAM 1:1 aislados** para cada endpoint.
+
+## El Decorador `@IamPermissions()`
+
+Defines los permisos usando el decorador `@IamPermissions()` directamente en los métodos de tu controlador. Cuando Aetherion compila tu infraestructura a través de CDKTF, aprovisiona un Rol IAM dedicado para esa Lambda específica y adjunta únicamente las políticas que definiste.
+
+Para mantener tus controladores limpios, se recomienda cargar los permisos desde un archivo JSON.
+
+```json
+// src/infra/iam/permissions.json
+{
+  "readS3": {
+    "actions": ["s3:GetObject"],
+    "resources": ["arn:aws:s3:::my-secure-bucket/*"]
+  }
+}
+```
+
+```typescript
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import permissions from '../infra/iam/permissions.json';
+
+@LambdaController({ lambdaName: 'document-api' })
+export class DocumentController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/documents/:id' })
+  @IamPermissions(permissions.readS3)
+  async getDocument() {
+    // Esta Lambda PUEDE leer de S3.
+    // NO PUEDE escribir en S3. NO PUEDE acceder a DynamoDB.
+  }
+}
+```
+
+## Seguridad por Defecto
+
+Si no adjuntas el decorador `@IamPermissions` a un método, Aetherion aprovisiona la Lambda con un rol de ejecución vacío que solo tiene permisos básicos de logging en CloudWatch (`AWSLambdaBasicExecutionRole`).

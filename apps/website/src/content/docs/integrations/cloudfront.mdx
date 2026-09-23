@@ -1,0 +1,29 @@
+---
+title: CloudFront
+description: Content Delivery Network caching for Aetherion apps.
+---
+
+Aetherion allows you to provision Amazon CloudFront distributions using the `@CloudFrontDistribution` decorator. This is particularly useful if your Aetherion backend serves static assets, highly cacheable JSON responses, or if you want to route traffic to an S3 bucket alongside your API Gateway.
+
+## Provisioning a Distribution
+
+To create a new CloudFront distribution, use the `@CloudFrontDistribution` property decorator inside an `@Infra()` class.
+
+```typescript
+// src/infra/edge.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { CloudFrontDistribution } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class EdgeInfra {
+  
+  @CloudFrontDistribution({ 
+    originDomain: 'my-bucket.s3.amazonaws.com'
+  })
+  cdn!: any;
+}
+```
+
+When deployed, Aetherion generates a distribution with standard secure defaults: redirecting HTTP to HTTPS, caching GET and HEAD requests, and using the default CloudFront certificate. 
+
+*Note: In the current version of Aetherion, attaching custom domains (Route53) to the CloudFront distribution requires manual CDKTF overrides.*

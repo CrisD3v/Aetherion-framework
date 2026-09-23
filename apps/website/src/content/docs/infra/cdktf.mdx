@@ -1,0 +1,51 @@
+---
+title: CDKTF Integration
+description: Infrastructure generated dynamically from your application logic.
+---
+
+
+Aetherion leverages the **Cloud Development Kit for Terraform (CDKTF)** as its infrastructure deployment engine. 
+
+Traditionally, developers maintain two separate codebases:
+1. The application code (TypeScript, Node.js).
+2. The infrastructure code (Terraform `.tf` files or Serverless Framework `serverless.yml`).
+
+Aetherion eliminates the second codebase entirely.
+
+## How It Works
+
+When you run `aetherion deploy`, the framework performs the following steps:
+
+1. **AST Parsing:** It scans your `src/` directory and parses the TypeScript Abstract Syntax Tree.
+2. **Metadata Extraction:** It extracts all the metadata from your decorators (`@Controller`, `@Get`, `@SqsConsumer`, `@IamPermissions`).
+3. **CDKTF Synthesis:** It programmatically builds a CDKTF `App` and `Stack` in memory, mapping your decorators to Terraform AWS Provider resources (`aws_lambda_function`, `aws_api_gateway_rest_api`, `aws_iam_role`, etc.).
+4. **Terraform Apply:** It invokes CDKTF to synthesize the JSON config and runs `terraform apply` under the hood.
+
+## Zero-Drift Architecture
+
+Because the infrastructure is synthesized directly from your code, it is impossible for your infrastructure and code to drift out of sync.
+
+- If you delete a `@Get('/users')` method, the corresponding API Gateway route and Lambda function are destroyed in the next deploy.
+- If you change `@IamPermissions(['s3:GetObject'])` to `['s3:PutObject']`, the IAM policy is instantly updated.
+
+## Escaping the Abstraction
+
+Aetherion is highly opinionated, but sometimes you need to provision resources that the framework doesn't have a decorator for (like an RDS database or a custom VPC).
+
+You can escape the abstraction by tapping into the raw CDKTF stack. In your `aetherion.config.ts`, you can provide a `setupInfrastructure` hook:
+
+```typescript
+// aetherion.config.ts
+import { AetherionConfig } from '@aetherionfw/cli';
+import { Vpc } from '@cdktf/provider-aws/lib/vpc';
+
+export default {
+  setupInfrastructure: (stack) => {
+    // You have access to the raw CDKTF stack here.
+    // Provision anything you want using standard CDKTF AWS provider classes.
+    new Vpc(stack, 'CustomVpc', {
+      cidrBlock: '10.0.0.0/16',
+    });
+  }
+} satisfies AetherionConfig;
+```

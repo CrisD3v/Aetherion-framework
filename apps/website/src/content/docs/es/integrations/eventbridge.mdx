@@ -1,0 +1,28 @@
+---
+title: EventBridge
+description: Cron jobs y enrutamiento de eventos con Amazon EventBridge.
+---
+
+Aetherion soporta la programación de tareas recurrentes y el enrutamiento de eventos utilizando el decorador de infraestructura `@EventBridgeRule`.
+
+## Tareas Programadas (Cron)
+
+Para crear una tarea programada recurrente (como un script de limpieza nocturno), aprovisiona una regla de EventBridge con un `scheduleExpression`.
+
+```typescript
+// src/infra/events.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { EventBridgeRule } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class EventsInfra {
+  
+  @EventBridgeRule({ 
+    name: 'nightly-cleanup', 
+    scheduleExpression: 'cron(0 2 * * ? *)' 
+  })
+  nightlyCleanupRule!: any;
+}
+```
+
+*Nota: En versiones futuras de Aetherion, podrás enlazar estas reglas directamente a tus métodos Lambda usando un decorador de método dedicado similar a `@SqsTrigger`.*

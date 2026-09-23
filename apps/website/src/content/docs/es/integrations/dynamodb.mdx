@@ -1,0 +1,67 @@
+---
+title: DynamoDB
+description: Aprovisionamiento e interacción con tablas de Amazon DynamoDB.
+---
+
+Aetherion te permite aprovisionar de forma nativa tablas de DynamoDB usando el decorador `@DynamoTable` dentro de una clase `@Infra()`.
+
+## Aprovisionando una Tabla
+
+Para crear una nueva tabla de DynamoDB, usa el decorador de propiedad `@DynamoTable`. Debes definir el nombre de la tabla y la estructura de la clave de partición principal.
+
+```typescript
+// src/infra/database.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { DynamoTable } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class DatabaseInfra {
+  
+  @DynamoTable({ 
+    name: 'users-table', 
+    partitionKey: { name: 'userId', type: 'STRING' } 
+  })
+  usersTable!: any;
+}
+```
+
+Aetherion configurará automáticamente la tabla utilizando el modo de facturación `PAY_PER_REQUEST`, el cual es óptimo para aplicaciones serverless con tráfico impredecible.
+
+## Lectura y Escritura de Datos
+
+Para interactuar con DynamoDB, usa el SDK de AWS (`@aws-sdk/client-dynamodb` y `@aws-sdk/lib-dynamodb`) dentro de tus controladores o servicios.
+
+¡No olvides adjuntar los `@IamPermissions` correctos para que tu función Lambda pueda acceder a la tabla!
+
+```typescript
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
+
+@LambdaController({ lambdaName: 'user-api' })
+export class UserController {
+
+  @Handle()
+  @Route({ method: 'POST', path: '/users' })
+  @IamPermissions({
+    actions: ['dynamodb:PutItem'],
+    resources: ['arn:aws:dynamodb:*:*:table/users-table']
+  })
+  async createUser(event: any) {
+    const user = JSON.parse(event.body);
+    
+    await docClient.send(new PutCommand({
+      TableName: 'users-table',
+      Item: {
+        userId: user.id,
+        name: user.name,
+      }
+    }));
+
+    return { success: true };
+  }
+}
+```

@@ -1,0 +1,67 @@
+---
+title: DynamoDB
+description: Provisioning and interacting with Amazon DynamoDB tables.
+---
+
+Aetherion allows you to natively provision DynamoDB tables using the `@DynamoTable` decorator inside an `@Infra()` class.
+
+## Provisioning a Table
+
+To create a new DynamoDB table, use the `@DynamoTable` property decorator. You must define the table name and the primary partition key structure.
+
+```typescript
+// src/infra/database.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { DynamoTable } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class DatabaseInfra {
+  
+  @DynamoTable({ 
+    name: 'users-table', 
+    partitionKey: { name: 'userId', type: 'STRING' } 
+  })
+  usersTable!: any;
+}
+```
+
+Aetherion will automatically configure the table using `PAY_PER_REQUEST` billing mode, which is optimal for serverless applications with unpredictable traffic.
+
+## Reading and Writing Data
+
+To interact with DynamoDB, use the AWS SDK (`@aws-sdk/client-dynamodb` and `@aws-sdk/lib-dynamodb`) inside your controllers or services.
+
+Don't forget to attach the correct `@IamPermissions` so your Lambda function can access the table!
+
+```typescript
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
+
+@LambdaController({ lambdaName: 'user-api' })
+export class UserController {
+
+  @Handle()
+  @Route({ method: 'POST', path: '/users' })
+  @IamPermissions({
+    actions: ['dynamodb:PutItem'],
+    resources: ['arn:aws:dynamodb:*:*:table/users-table']
+  })
+  async createUser(event: any) {
+    const user = JSON.parse(event.body);
+    
+    await docClient.send(new PutCommand({
+      TableName: 'users-table',
+      Item: {
+        userId: user.id,
+        name: user.name,
+      }
+    }));
+
+    return { success: true };
+  }
+}
+```

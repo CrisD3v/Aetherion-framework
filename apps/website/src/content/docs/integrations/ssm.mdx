@@ -1,0 +1,63 @@
+---
+title: Systems Manager (SSM)
+description: Centralized configuration and secrets management.
+---
+
+Aetherion supports provisioning AWS Systems Manager (SSM) Parameter Store entries using the `@SsmParameter` decorator. This is useful for storing environment variables, configuration strings, or secrets that multiple Lambdas or environments need to access.
+
+## Provisioning a Parameter
+
+To create a new SSM Parameter, use the `@SsmParameter` property decorator inside an `@Infra()` class.
+
+```typescript
+// src/infra/config.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { SsmParameter } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class ConfigInfra {
+  
+  @SsmParameter({ 
+    name: '/aetherion/prod/apiKey',
+    value: 'super-secret-key-123',
+    type: 'SecureString' // 'String' | 'StringList' | 'SecureString'
+  })
+  apiKeyParameter!: any;
+}
+```
+
+## Reading Parameters
+
+Because Aetherion runs standard Node.js on AWS Lambda, you can read these parameters at runtime using the AWS SDK (`@aws-sdk/client-ssm`).
+
+To optimize your Lambda's cold start time, it is recommended to fetch SSM parameters outside the handler (in the global scope) so they are cached between warm invocations, or use the AWS Parameters and Secrets Lambda Extension.
+
+```typescript
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+
+const ssm = new SSMClient({});
+let cachedApiKey: string | null = null;
+
+@LambdaController({ lambdaName: 'secure-api' })
+export class SecureController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/secure-data' })
+  @IamPermissions({
+    actions: ['ssm:GetParameter'],
+    resources: ['arn:aws:ssm:*:*:parameter/aetherion/prod/apiKey']
+  })
+  async getData() {
+    if (!cachedApiKey) {
+      const result = await ssm.send(new GetParameterCommand({
+        Name: '/aetherion/prod/apiKey',
+        WithDecryption: true
+      }));
+      cachedApiKey = result.Parameter?.Value || '';
+    }
+
+    return { data: 'Secure response using API Key: ' + cachedApiKey };
+  }
+}
+```

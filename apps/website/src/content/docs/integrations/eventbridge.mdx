@@ -1,0 +1,28 @@
+---
+title: EventBridge
+description: Cron jobs and event routing with Amazon EventBridge.
+---
+
+Aetherion supports scheduling recurring tasks and routing events using the `@EventBridgeRule` infrastructure decorator.
+
+## Scheduled Jobs (Cron)
+
+To create a recurring scheduled task (like a nightly cleanup script), provision an EventBridge rule with a `scheduleExpression`.
+
+```typescript
+// src/infra/events.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { EventBridgeRule } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class EventsInfra {
+  
+  @EventBridgeRule({ 
+    name: 'nightly-cleanup', 
+    scheduleExpression: 'cron(0 2 * * ? *)' 
+  })
+  nightlyCleanupRule!: any;
+}
+```
+
+*Note: In future versions of Aetherion, you will be able to bind these rules directly to your Lambda methods using a dedicated method decorator similar to `@SqsTrigger`.*

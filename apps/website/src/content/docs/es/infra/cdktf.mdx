@@ -1,0 +1,32 @@
+---
+title: Integración CDKTF
+description: Infraestructura generada dinámicamente a partir de tu lógica de negocio.
+---
+
+
+Aetherion usa el **Cloud Development Kit for Terraform (CDKTF)** como motor subyacente. Esto elimina la necesidad de mantener código de infraestructura (archivos `.tf`) separado del código de la aplicación.
+
+## ¿Cómo Funciona?
+
+1. **Análisis AST:** Analiza tu código fuente y su Árbol de Sintaxis Abstracta (AST).
+2. **Extracción de Metadatos:** Recolecta información de decoradores como `@Controller`, `@Get`, y `@IamPermissions`.
+3. **Síntesis:** Construye recursos de Terraform en memoria mapeando tu código a la API de AWS.
+4. **Despliegue:** Ejecuta `terraform apply` en segundo plano.
+
+## Escapando la Abstracción
+
+Si necesitas aprovisionar recursos que Aetherion no soporta nativamente (ej., una VPC personalizada), puedes usar el archivo de configuración `aetherion.config.ts`:
+
+```typescript
+import { AetherionConfig } from '@aetherionfw/cli';
+import { Vpc } from '@cdktf/provider-aws/lib/vpc';
+
+export default {
+  setupInfrastructure: (stack) => {
+    // Provisión de recursos personalizados usando CDKTF estándar
+    new Vpc(stack, 'CustomVpc', {
+      cidrBlock: '10.0.0.0/16',
+    });
+  }
+} satisfies AetherionConfig;
+```

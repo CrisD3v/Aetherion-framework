@@ -1,0 +1,33 @@
+---
+title: Cognito User Pools
+description: Añadiendo autenticación con Amazon Cognito.
+---
+
+Aetherion te permite aprovisionar un User Pool de Amazon Cognito directamente desde tus clases de infraestructura usando el decorador `@CognitoUserPool`.
+
+## Aprovisionando un User Pool
+
+Para crear un nuevo User Pool, usa el decorador de propiedad `@CognitoUserPool` dentro de una clase `@Infra()`.
+
+```typescript
+// src/infra/auth.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { CognitoUserPool } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class AuthInfra {
+  
+  @CognitoUserPool({ 
+    name: 'aetherion-users'
+  })
+  userPool!: any;
+}
+```
+
+Cuando despliegues, Aetherion generará el código CDKTF necesario para aprovisionar el User Pool. Luego puedes usar las librerías oficiales de AWS Amplify o el SDK estándar de AWS para manejar el registro de usuarios, inicio de sesión y generación de tokens en el frontend.
+
+## Integrando con API Gateway
+
+Para proteger tus endpoints, debes validar los tokens JWT proporcionados por Cognito. Debido a que Aetherion maneja el enrutamiento a través de `@Route`, la mejor manera de forzar la autenticación es creando un Middleware Personalizado que verifique el token JWT de Cognito antes de permitir que la Lambda se ejecute.
+
+Consulta la documentación de [Middlewares y Autorizadores](/core/middlewares) para aprender cómo crear un interceptor `@UseMiddlewares` personalizado.

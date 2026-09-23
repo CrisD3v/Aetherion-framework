@@ -1,0 +1,55 @@
+---
+title: SQS Queues
+description: Event-driven background processing with Amazon SQS.
+---
+
+Aetherion makes asynchronous background processing simple using the `@SqsQueue` infrastructure decorator and the `@SqsTrigger` method decorator.
+
+## Provisioning a Queue
+
+To provision an SQS Queue, use the `@SqsQueue` decorator inside an `@Infra()` class.
+
+```typescript
+// src/infra/messaging.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { SqsQueue } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class MessagingInfra {
+  
+  @SqsQueue({ 
+    name: 'image-processing-queue', 
+    visibilityTimeout: 30 
+  })
+  imageQueue!: any;
+}
+```
+
+## Consuming SQS Messages
+
+To consume messages from a queue, you do not use `@Route`. Instead, attach the `@SqsTrigger` decorator to your `@LambdaController` method.
+
+Aetherion will automatically provision an Event Source Mapping between the SQS Queue and your 1:1 Lambda function.
+
+```typescript
+import { LambdaController, Handle, SqsTrigger } from '@aetherionfw/core';
+
+@LambdaController({ 
+  lambdaName: 'image-worker',
+  memorySize: 512,
+  timeout: 30
+})
+export class ImageWorkerController {
+
+  @Handle()
+  @SqsTrigger('image-processing-queue', { batchSize: 10 })
+  async processImages(event: any) {
+    for (const record of event.Records) {
+      console.log('Processing message:', record.body);
+      // Process the image...
+    }
+  }
+}
+```
+
+Because this worker is event-driven, it does not require an API Gateway route. It will scale automatically based on the number of messages in the queue.

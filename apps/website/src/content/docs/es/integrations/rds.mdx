@@ -1,0 +1,61 @@
+---
+title: Instancias RDS
+description: Aprovisionamiento de instancias de Relational Database Service (RDS).
+---
+
+Para aplicaciones que requieren bases de datos relacionales como PostgreSQL o MySQL, Aetherion proporciona el decorador de infraestructura `@RdsInstance`.
+
+## Aprovisionando una Instancia RDS
+
+Para aprovisionar una base de datos, usa el decorador `@RdsInstance` dentro de una clase `@Infra()`.
+
+```typescript
+// src/infra/database.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { RdsInstance } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class DatabaseInfra {
+  
+  @RdsInstance({ 
+    engine: 'postgres', 
+    size: 'db.t3.micro', 
+    dbName: 'aetherion_db' 
+  })
+  mainDatabase!: any;
+}
+```
+
+Cuando despliegas, el constructor CDKTF de Aetherion aprovisiona la instancia de la base de datos dentro de tu VPC. Por defecto, `skipFinalSnapshot` está configurado en `true` para los entornos de desarrollo.
+
+## Conectando a RDS
+
+Debido a que las instancias RDS residen dentro de una VPC, cualquier función Lambda que necesite conectarse a la base de datos también debe ser desplegada dentro de la misma VPC (o una VPC interconectada).
+
+*Nota: En la versión actual de Aetherion, la configuración de VPC para Lambdas debe ser manejada cuidadosamente. Se recomienda usar herramientas de pool de conexiones como AWS RDS Proxy o Prisma Accelerate si tus Lambdas experimentan alta concurrencia.*
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+import { Client } from 'pg';
+
+@LambdaController({ lambdaName: 'reports-api' })
+export class ReportsController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/reports' })
+  async getReports() {
+    const client = new Client({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: 'aetherion_db',
+    });
+    
+    await client.connect();
+    const res = await client.query('SELECT * FROM reports');
+    await client.end();
+    
+    return res.rows;
+  }
+}
+```

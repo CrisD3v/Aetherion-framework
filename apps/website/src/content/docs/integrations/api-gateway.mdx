@@ -1,0 +1,38 @@
+---
+title: API Gateway Integration
+description: How Aetherion maps controllers to AWS API Gateway endpoints.
+---
+
+Aetherion abstracts away the complexity of configuring AWS API Gateway manually. The framework uses a **1:1 mapping** approach to automatically provision and configure an API Gateway endpoint for every route you define.
+
+## Implicit Creation
+
+You do not need to use an `@Infra` decorator to create an API Gateway. The API Gateway is **implicitly created** the moment you use the `@Route` decorator on any method within a `@LambdaController`.
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+
+@LambdaController({ lambdaName: 'user-api' })
+export class UserController {
+  
+  @Handle()
+  // This automatically provisions an API Gateway HTTP API route
+  @Route({ method: 'GET', path: '/users' })
+  async getUsers() {
+    return [];
+  }
+}
+```
+
+When you deploy your application using the CLI (`pnpm aetherion deploy`), Aetherion's CDKTF builder performs the following steps:
+
+1. Creates an **AWS API Gateway (HTTP API)** for your stage.
+2. Creates an **Integration** between the API Gateway and your specific 1:1 Lambda function.
+3. Creates a **Route** matching the `method` and `path` specified in your `@Route` decorator.
+4. Grants API Gateway the permission to invoke your Lambda function (`lambda:InvokeFunction`).
+
+## CORS and Custom Domains
+
+By default, the automatically provisioned API Gateway comes with open CORS settings designed for development. 
+
+In future versions of Aetherion, you will be able to customize the API Gateway properties (such as custom domains, strict CORS rules, and authorizers) globally in your `aetherion.config.ts`.

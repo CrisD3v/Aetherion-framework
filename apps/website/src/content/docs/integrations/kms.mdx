@@ -1,0 +1,29 @@
+---
+title: KMS Keys
+description: Provisioning KMS Keys for encryption.
+---
+
+
+Aetherion allows you to provision AWS KMS Keys directly from your infrastructure classes.
+
+## Provisioning a KMS Key
+
+To provision a new encryption key, use the `@KmsKey` decorator inside an `@Infra()` class.
+
+```typescript
+// src/infra/security.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { KmsKey } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class SecurityInfra {
+  
+  @KmsKey({ 
+    alias: 'alias/my-app-key', 
+    description: 'Master key for encrypting payloads' 
+  })
+  masterKey!: any;
+}
+```
+
+Once provisioned, you can use the standard AWS SDK (`@aws-sdk/client-kms`) to encrypt and decrypt data within your `@LambdaController` methods. Remember to assign the `kms:Encrypt` and `kms:Decrypt` permissions via `@IamPermissions()` to any Lambda that needs to use the key.

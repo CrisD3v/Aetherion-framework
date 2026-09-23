@@ -1,0 +1,29 @@
+---
+title: Llaves KMS
+description: Aprovisionamiento de Llaves KMS para cifrado.
+---
+
+
+Aetherion te permite aprovisionar Llaves KMS de AWS directamente desde tus clases de infraestructura.
+
+## Aprovisionando una Llave KMS
+
+Para aprovisionar una nueva llave de cifrado, usa el decorador `@KmsKey` dentro de una clase `@Infra()`.
+
+```typescript
+// src/infra/security.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { KmsKey } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class SecurityInfra {
+  
+  @KmsKey({ 
+    alias: 'alias/my-app-key', 
+    description: 'Master key for encrypting payloads' 
+  })
+  masterKey!: any;
+}
+```
+
+Una vez aprovisionada, puedes usar el SDK estándar de AWS (`@aws-sdk/client-kms`) para cifrar y descifrar datos dentro de los métodos de tu `@LambdaController`. Recuerda asignar los permisos `kms:Encrypt` y `kms:Decrypt` mediante `@IamPermissions()` a cualquier Lambda que necesite usar la llave.

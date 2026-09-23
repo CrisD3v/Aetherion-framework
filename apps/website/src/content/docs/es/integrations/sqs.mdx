@@ -1,0 +1,55 @@
+---
+title: Colas SQS
+description: Procesamiento en segundo plano orientado a eventos con Amazon SQS.
+---
+
+Aetherion facilita el procesamiento asíncrono en segundo plano utilizando el decorador de infraestructura `@SqsQueue` y el decorador de método `@SqsTrigger`.
+
+## Aprovisionando una Cola
+
+Para aprovisionar una Cola SQS, usa el decorador `@SqsQueue` dentro de una clase `@Infra()`.
+
+```typescript
+// src/infra/messaging.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { SqsQueue } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class MessagingInfra {
+  
+  @SqsQueue({ 
+    name: 'image-processing-queue', 
+    visibilityTimeout: 30 
+  })
+  imageQueue!: any;
+}
+```
+
+## Consumiendo Mensajes SQS
+
+Para consumir mensajes de una cola, no usas `@Route`. En su lugar, adjunta el decorador `@SqsTrigger` al método de tu `@LambdaController`.
+
+Aetherion aprovisionará automáticamente un Event Source Mapping entre la Cola SQS y tu función Lambda 1:1.
+
+```typescript
+import { LambdaController, Handle, SqsTrigger } from '@aetherionfw/core';
+
+@LambdaController({ 
+  lambdaName: 'image-worker',
+  memorySize: 512,
+  timeout: 30
+})
+export class ImageWorkerController {
+
+  @Handle()
+  @SqsTrigger('image-processing-queue', { batchSize: 10 })
+  async processImages(event: any) {
+    for (const record of event.Records) {
+      console.log('Procesando mensaje:', record.body);
+      // Procesar la imagen...
+    }
+  }
+}
+```
+
+Debido a que este worker es orientado a eventos, no requiere una ruta en el API Gateway. Escalará automáticamente basándose en el número de mensajes que haya en la cola.

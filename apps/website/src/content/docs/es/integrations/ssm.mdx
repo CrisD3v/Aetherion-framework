@@ -1,0 +1,63 @@
+---
+title: Systems Manager (SSM)
+description: Configuración centralizada y gestión de secretos.
+---
+
+Aetherion soporta el aprovisionamiento de entradas del AWS Systems Manager (SSM) Parameter Store usando el decorador `@SsmParameter`. Esto es útil para almacenar variables de entorno, cadenas de configuración o secretos a los que necesitan acceder múltiples Lambdas o entornos.
+
+## Aprovisionando un Parámetro
+
+Para crear un nuevo Parámetro SSM, usa el decorador de propiedad `@SsmParameter` dentro de una clase `@Infra()`.
+
+```typescript
+// src/infra/config.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { SsmParameter } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class ConfigInfra {
+  
+  @SsmParameter({ 
+    name: '/aetherion/prod/apiKey',
+    value: 'super-secret-key-123',
+    type: 'SecureString' // 'String' | 'StringList' | 'SecureString'
+  })
+  apiKeyParameter!: any;
+}
+```
+
+## Leyendo Parámetros
+
+Debido a que Aetherion ejecuta Node.js estándar en AWS Lambda, puedes leer estos parámetros en tiempo de ejecución usando el SDK de AWS (`@aws-sdk/client-ssm`).
+
+Para optimizar el tiempo de arranque en frío de tu Lambda, se recomienda obtener los parámetros SSM fuera del handler (en el scope global) para que queden cacheados entre invocaciones calientes, o usar la AWS Parameters and Secrets Lambda Extension.
+
+```typescript
+import { LambdaController, Handle, Route, IamPermissions } from '@aetherionfw/core';
+import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+
+const ssm = new SSMClient({});
+let cachedApiKey: string | null = null;
+
+@LambdaController({ lambdaName: 'secure-api' })
+export class SecureController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/secure-data' })
+  @IamPermissions({
+    actions: ['ssm:GetParameter'],
+    resources: ['arn:aws:ssm:*:*:parameter/aetherion/prod/apiKey']
+  })
+  async getData() {
+    if (!cachedApiKey) {
+      const result = await ssm.send(new GetParameterCommand({
+        Name: '/aetherion/prod/apiKey',
+        WithDecryption: true
+      }));
+      cachedApiKey = result.Parameter?.Value || '';
+    }
+
+    return { data: 'Respuesta segura usando API Key: ' + cachedApiKey };
+  }
+}
+```

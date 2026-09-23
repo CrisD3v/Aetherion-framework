@@ -1,0 +1,38 @@
+---
+title: VPC Networking
+description: Provisioning private networks using Aetherion.
+---
+
+Aetherion allows you to provision custom Virtual Private Clouds (VPCs) natively using the `@Vpc` decorator.
+
+## Provisioning a VPC
+
+To create a new VPC, use the `@Vpc` property decorator inside an `@Infra()` class. You must define a valid IPv4 CIDR block.
+
+```typescript
+// src/infra/network.infra.ts
+import { Infra } from '@aetherionfw/core';
+import { Vpc } from '@aetherionfw/core/decorators/infra.decorator';
+
+@Infra()
+export class NetworkInfra {
+  
+  @Vpc({ 
+    name: 'aetherion-vpc',
+    cidr: '10.0.0.0/16',
+    natGateways: 1 // Optional: Provision NAT Gateways for private subnet internet access
+  })
+  mainVpc!: any;
+}
+```
+
+Aetherion will automatically generate the VPC along with DNS support, DNS hostnames, and all required subnets and route tables.
+
+## VPC and Lambdas
+
+If you provision resources like `@RdsInstance` or ElastiCache that must reside inside a VPC, your Lambda functions will also need to be placed within that VPC to communicate with them.
+
+Currently, if you need to attach a Lambda function to a custom VPC, you must manually define the VPC configuration in your CDKTF builder overrides or via advanced Aetherion configs. 
+
+> [!WARNING]
+> Placing a Lambda function inside a VPC increases its cold start time significantly (due to Elastic Network Interface creation) and limits its outbound internet access unless a NAT Gateway is provisioned.
