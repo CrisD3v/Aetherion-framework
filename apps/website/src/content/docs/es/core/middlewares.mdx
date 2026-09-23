@@ -1,0 +1,83 @@
+---
+title: Middlewares y Autorizadores
+description: Intercepción de peticiones e implementación de autorización personalizada.
+---
+
+En una aplicación tradicional de Express.js, los middlewares son funciones que se ejecutan antes del manejador de ruta final. Aetherion provee un concepto similar usando el decorador `@UseMiddlewares`, adaptado para AWS Lambda.
+
+## Creando un Middleware
+
+Un middleware en Aetherion es una clase que implementa la interfaz `Middleware`. Debe definir un método `handle`.
+
+```typescript
+// src/middlewares/logger.middleware.ts
+import { Middleware } from '@aetherionfw/core/adapter/interfaces';
+
+export class LoggerMiddleware implements Middleware {
+  async handle(event: any, context: any, next: () => Promise<any>) {
+    console.log(`[REQ] ${event.requestContext.http.method} ${event.requestContext.http.path}`);
+    
+    // Llama al siguiente middleware o al manejador de ruta final
+    const response = await next();
+    
+    console.log(`[RES] Status: ${response.statusCode}`);
+    return response;
+  }
+}
+```
+
+## Aplicando Middlewares
+
+Aplicas los middlewares a tus controladores o a métodos específicos usando el decorador `@UseMiddlewares`.
+
+```typescript
+import { LambdaController, Handle, Route, UseMiddlewares } from '@aetherionfw/core';
+import { LoggerMiddleware } from '../middlewares/logger.middleware';
+
+@LambdaController({ lambdaName: 'user-api' })
+// Aplicado a TODOS los métodos de este controlador
+@UseMiddlewares([LoggerMiddleware])
+export class UserController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/users' })
+  async getUsers() {
+    return [{ id: 1, name: 'Alice' }];
+  }
+}
+```
+
+## Autorizadores Personalizados
+
+Debido a que Aetherion aprovisiona APIs HTTP en API Gateway, la manera más eficiente de manejar la autorización (como validar JWTs de Cognito o tokens Bearer personalizados) es implementar un **Middleware Autorizador**.
+
+Si un middleware autorizador lanza un error o retorna una respuesta `401 Unauthorized` sin llamar a `next()`, la ejecución de la Lambda se detiene inmediatamente.
+
+```typescript
+// src/middlewares/auth.middleware.ts
+import { Middleware } from '@aetherionfw/core/adapter/interfaces';
+
+export class AuthMiddleware implements Middleware {
+  async handle(event: any, context: any, next: () => Promise<any>) {
+    const authHeader = event.headers['authorization'];
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { statusCode: 401, body: 'Unauthorized' };
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      // Validar token (ej. usando aws-jwt-verify para Cognito)
+      const decoded = await verifyToken(token);
+      
+      // Inyectar información del usuario en el objeto event para que la use el controlador
+      event.user = decoded;
+      
+      return await next();
+    } catch (err) {
+      return { statusCode: 403, body: 'Forbidden' };
+    }
+  }
+}
+```

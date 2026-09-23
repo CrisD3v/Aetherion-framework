@@ -1,0 +1,66 @@
+---
+title: Dependency Injection
+description: Lightweight, serverless-optimized IoC container.
+---
+
+
+Aetherion features a built-in Dependency Injection (DI) system tailored specifically for the 1:1 Lambda architecture. 
+
+## The `@Injectable()` Decorator
+
+To declare a class as a service that can be injected into a controller, annotate it with the `@Injectable()` decorator.
+
+```typescript
+// src/application/user.service.ts
+import { Injectable } from '@aetherionfw/core';
+
+@Injectable()
+export class UserService {
+  async findUser(id: string) {
+    return { id, name: 'Alice' };
+  }
+}
+```
+
+## Injecting Services
+
+You inject services into your Controllers through the `constructor`. Aetherion will automatically resolve the dependencies when the Lambda cold starts.
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+import { UserService } from '../application/user.service';
+
+@LambdaController({ lambdaName: 'user-api' })
+export class UserController {
+  // Aetherion automatically resolves and injects UserService
+  constructor(private readonly userService: UserService) {}
+
+  @Handle()
+  @Route({ method: 'GET', path: '/users' })
+  async getUser() {
+    return this.userService.findUser('123');
+  }
+}
+```
+
+## Modules
+
+To group related controllers, services, and infrastructure together, use the `@Module()` decorator. 
+
+Modules act as logical boundaries. When you compile your application, Aetherion reads the `app.module.ts` to discover the entire dependency graph.
+
+```typescript
+// src/user.module.ts
+import { Module } from '@aetherionfw/core';
+import { UserInfra } from './infra/user.infra';
+import { UserController } from './controllers/user.controller';
+import { UserService } from './application/user.service';
+
+@Module({
+  name: 'UserModule',
+  providers: [UserService],
+  controllers: [UserController],
+  infra: [UserInfra],
+})
+export class UserModule {}
+```

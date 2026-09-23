@@ -1,0 +1,22 @@
+---
+title: Logs y Trazabilidad
+description: Logs JSON estructurados nativos para CloudWatch.
+---
+
+
+Aetherion provee un logger JSON estructurado (`@aetherionfw/logger`) ideal para ser consultado en CloudWatch Logs Insights. Este logger adjunta automáticamente el ID de la petición de API Gateway en cada log, permitiendo agrupar mensajes por ejecución.
+
+```typescript
+import { Controller, Get } from '@aetherionfw/core';
+import { Logger, ILogger } from '@aetherionfw/logger';
+
+@Controller('/users')
+export class UserController {
+  constructor(@Logger() private readonly logger: ILogger) {}
+
+  @Get('/')
+  async getUsers() {
+    this.logger.info('Obteniendo usuarios de la base de datos');
+  }
+}
+```

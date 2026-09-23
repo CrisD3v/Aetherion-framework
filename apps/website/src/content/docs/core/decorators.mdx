@@ -1,0 +1,117 @@
+---
+title: Decorators
+description: Defining routes, logic, and infrastructure using TypeScript decorators.
+---
+
+
+In Aetherion, decorators are the single source of truth for both your application logic and your cloud infrastructure. 
+
+## The Controller
+
+The `@LambdaController()` decorator marks a class as a Lambda handler. You configure the Lambda properties directly within the decorator, such as runtime and memory size.
+
+```typescript
+import { LambdaController } from '@aetherionfw/core';
+
+@LambdaController({
+  lambdaName: 'product-api',
+  runtime: 'nodejs22.x',
+  memorySize: 256,
+  timeout: 10,
+})
+export class ProductController {
+  // ...
+}
+```
+
+## Routing and Handling
+
+Every method you want to expose as an endpoint must have the `@Handle()` and `@Route()` decorators.
+
+- `@Handle()`: Tells the Aetherion compiler that this method is the entrypoint for the Lambda function.
+- `@Route({ method, path })`: Binds the Lambda function to an AWS API Gateway endpoint.
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+
+@LambdaController({ lambdaName: 'product-api' })
+export class ProductController {
+  
+  @Handle()
+  @Route({ method: 'GET', path: '/products' })
+  async getProducts() {
+    return [];
+  }
+
+  @Handle()
+  @Route({ method: 'POST', path: '/products' })
+  async createProduct() {
+    return { created: true };
+  }
+}
+```
+
+## OpenAPI Documentation
+
+Aetherion includes native OpenAPI 3.0 support via `@aetherionfw/docs`. You can document your API directly on the controller methods, ensuring your swagger definitions are always in sync with your logic.
+
+- `@ApiTag()`: Groups endpoints together.
+- `@ApiOperation()`: Documents the specific endpoint's summary and description.
+- `@ApiResponse()`: Documents expected HTTP status codes and return types.
+
+```typescript
+import { ApiTag, ApiOperation, ApiResponse } from '@aetherionfw/docs';
+
+@ApiTag('Products', 'Product management endpoints')
+@LambdaController({ lambdaName: 'product-api' })
+export class ProductController {
+  
+  @Handle()
+  @Route({ method: 'GET', path: '/products' })
+  @ApiOperation({
+    summary: 'List products',
+    description: 'Returns a paginated list of products.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+  })
+  async getProducts() {
+    return [];
+  }
+}
+```
+
+## Middlewares
+
+You can intercept and modify requests using the `@UseMiddlewares()` decorator. 
+
+```typescript
+import { UseMiddlewares } from '@aetherionfw/core';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+
+@Handle()
+@Route({ method: 'POST', path: '/secure-data' })
+@UseMiddlewares(AuthMiddleware)
+async secureEndpoint() {
+  return { secure: true };
+}
+```
+
+## SQS Triggers
+
+If your Lambda should be triggered by an SQS queue instead of API Gateway, use `@SqsTrigger()`.
+
+```typescript
+import { LambdaController, Handle, SqsTrigger } from '@aetherionfw/core';
+
+@LambdaController({ lambdaName: 'worker' })
+export class WorkerController {
+  
+  @Handle()
+  @SqsTrigger('image-processing-queue', { batchSize: 10 })
+  async processMessage(event: any) {
+    // Process SQS event
+  }
+}
+```

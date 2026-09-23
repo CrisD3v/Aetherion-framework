@@ -1,0 +1,66 @@
+---
+title: Inyección de Dependencias
+description: Contenedor IoC ligero optimizado para Serverless.
+---
+
+
+Aetherion cuenta con un sistema de Inyección de Dependencias (DI) incorporado, adaptado específicamente para la arquitectura 1:1 Lambda.
+
+## El Decorador `@Injectable()`
+
+Para declarar una clase como un servicio que puede ser inyectado en un controlador, anótala con el decorador `@Injectable()`.
+
+```typescript
+// src/application/user.service.ts
+import { Injectable } from '@aetherionfw/core';
+
+@Injectable()
+export class UserService {
+  async findUser(id: string) {
+    return { id, name: 'Alice' };
+  }
+}
+```
+
+## Inyectando Servicios
+
+Inyectas los servicios en tus Controladores a través del `constructor`. Aetherion resolverá automáticamente las dependencias cuando ocurra el arranque en frío de la Lambda.
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+import { UserService } from '../application/user.service';
+
+@LambdaController({ lambdaName: 'user-api' })
+export class UserController {
+  // Aetherion resuelve e inyecta UserService automáticamente
+  constructor(private readonly userService: UserService) {}
+
+  @Handle()
+  @Route({ method: 'GET', path: '/users' })
+  async getUser() {
+    return this.userService.findUser('123');
+  }
+}
+```
+
+## Módulos
+
+Para agrupar controladores, servicios e infraestructura relacionados, usa el decorador `@Module()`.
+
+Los módulos actúan como límites lógicos. Cuando compilas tu aplicación, Aetherion lee el `app.module.ts` para descubrir todo el gráfico de dependencias.
+
+```typescript
+// src/user.module.ts
+import { Module } from '@aetherionfw/core';
+import { UserInfra } from './infra/user.infra';
+import { UserController } from './controllers/user.controller';
+import { UserService } from './application/user.service';
+
+@Module({
+  name: 'UserModule',
+  providers: [UserService],
+  controllers: [UserController],
+  infra: [UserInfra],
+})
+export class UserModule {}
+```

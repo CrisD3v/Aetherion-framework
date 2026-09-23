@@ -1,0 +1,93 @@
+---
+title: Inicio Rápido
+description: Inicia y despliega tu primera aplicación Aetherion en minutos.
+---
+
+
+Configura y despliega tu primera aplicación Aetherion en AWS en menos de 5 minutos.
+
+## 1. Crea un Nuevo Proyecto
+
+Aetherion proporciona un CLI para crear proyectos y generar infraestructura. Crea un nuevo proyecto Aetherion ejecutando:
+
+```bash
+npx @aetherionfw/cli init my-serverless-api
+cd my-serverless-api
+```
+
+Este comando generará una estructura de directorios estándar:
+```text
+my-serverless-api/
+├── src/
+│   ├── application/
+│   │   └── initial-health.service.ts
+│   ├── controllers/
+│   │   └── initial.lambda.ts
+│   ├── infra/
+│   │   └── initial.infra.ts
+│   ├── app.module.ts
+│   └── initial.module.ts
+├── aetherion.config.ts
+├── package.json
+└── tsconfig.json
+```
+
+## 2. Revisa el Código
+
+### El Controlador
+
+Abre `src/initial/controllers/initial.lambda.ts`. Verás un controlador REST que mapea directamente a AWS API Gateway:
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+import { ApiTag, ApiOperation, ApiResponse } from '@aetherionfw/docs';
+import { InitialHealthService } from '../application/initial-health.service';
+
+@ApiTag('Initial', 'Template inicial')
+@LambdaController({
+  lambdaName: 'initial-api',
+  runtime: 'nodejs22.x',
+  memorySize: 128,
+  timeout: 5,
+})
+export class InitialLambdaController {
+  constructor(private readonly health: InitialHealthService) {}
+
+  @Handle()
+  @Route({ method: 'GET', path: '/initial/health' })
+  @ApiOperation({ summary: 'Health check' })
+  @ApiResponse({ status: 200, description: 'Health OK' })
+  async getHealth() {
+    return this.health.getHealth();
+  }
+}
+```
+
+### El Módulo
+
+Aetherion usa `@Module` para organizar dependencias e inyectar infraestructura en tu aplicación. Observa `src/initial.module.ts`:
+
+```typescript
+import { Module } from '@aetherionfw/core';
+import { InitialInfra } from './infra/initial.infra';
+import { InitialLambdaController } from './controllers/initial.lambda';
+import { InitialHealthService } from './application/initial-health.service';
+
+@Module({
+  name: 'InitialModule',
+  providers: [InitialHealthService],
+  controllers: [InitialLambdaController],
+  infra: [InitialInfra],
+})
+export class InitialModule {}
+```
+
+## 3. Despliega en AWS
+
+Cuando estés listo para desplegar, ejecuta el comando deploy. Aetherion analizará tu AST, generará el código CDKTF, compilará tus Lambdas y aplicará el estado de Terraform a tu cuenta de AWS.
+
+```bash
+pnpm aetherion deploy --stage dev
+```
+
+Una vez que termine el despliegue, el CLI mostrará la URL de tu endpoint en API Gateway!

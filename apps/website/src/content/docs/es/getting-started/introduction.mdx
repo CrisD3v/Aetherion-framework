@@ -1,0 +1,52 @@
+---
+title: Introducción
+description: ¿Qué es Aetherion y por qué existe?
+---
+
+
+Aetherion es un framework TypeScript altamente estructurado y basado en decoradores, diseñado exclusivamente para despliegues Serverless en AWS.
+
+Su misión principal es **erradicar el Lambdalith**—un patrón donde todo un framework web (como Express o NestJS) se empaqueta dentro de una única función AWS Lambda. Aunque el Lambdalith es fácil de desplegar al principio, inevitablemente lleva a paquetes enormes, tiempos de arranque en frío lentos, permisos IAM excesivos y un radio de explosión masivo.
+
+Aetherion resuelve esto introduciendo una **Arquitectura 1:1 Lambda**.
+
+## La Arquitectura 1:1 Lambda
+
+En Aetherion, escribes clases estándar de TypeScript y usas decoradores para definir las rutas de tu API y tu infraestructura. Detrás de escena, Aetherion analiza tu código usando un árbol de sintaxis abstracta (AST) y genera configuraciones precisas de CDKTF (Cloud Development Kit for Terraform).
+
+Cada método de controlador que defines se convierte en una **función AWS Lambda completamente independiente y aislada**.
+
+```typescript
+import { LambdaController, Route, Handle } from '@aetherionfw/core';
+
+@LambdaController({
+  lambdaName: 'user-api',
+  runtime: 'nodejs22.x',
+  memorySize: 128,
+  timeout: 5,
+})
+export class UserController {
+  
+  // Esto se convierte en su propia función Lambda
+  @Handle()
+  @Route({ method: 'GET', path: '/users' })
+  async getUsers() {
+    return { users: [] };
+  }
+
+  // Esto se convierte en otra función Lambda independiente
+  @Handle()
+  @Route({ method: 'POST', path: '/users' })
+  async createUser() {
+    return { success: true };
+  }
+}
+```
+
+### ¿Por qué esto es importante?
+
+1. **Arranques en frío microscópicos:** Como cada Lambda solo contiene el código de un solo endpoint, el tamaño del paquete se mide en kilobytes, no en megabytes. Los cold starts se vuelven imperceptibles.
+2. **Seguridad de menor privilegio real:** Un endpoint que lee de S3 solo obtiene el permiso `s3:GetObject`. Un endpoint que escribe en DynamoDB solo obtiene `dynamodb:PutItem`. Comprometer un endpoint no le da a un atacante acceso a toda tu infraestructura.
+3. **Infraestructura sin deriva (Zero-Drift):** Nunca escribes archivos `.tf` o plantillas YAML a mano. La infraestructura se deriva de forma nativa desde el código de tu aplicación usando la clase `@Infra`.
+
+¿Listo para verlo en acción? Dirígete a la guía de [Inicio Rápido](/getting-started/quickstart).

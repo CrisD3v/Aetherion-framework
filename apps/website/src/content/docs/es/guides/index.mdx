@@ -1,0 +1,15 @@
+---
+title: Guías y Mejores Prácticas
+description: Ejemplos de testing, logging y troubleshooting.
+---
+
+
+Gracias a la inyección de dependencias nativa, probar tu código en Aetherion es tan simple como instanciar una clase TypeScript estándar, pasando objetos *mock* al constructor del controlador. ¡Sin servidores locales lentos!
+
+
+Aetherion provee un logger JSON estructurado (`@aetherionfw/logger`) ideal para ser consultado en CloudWatch Logs Insights. Este logger adjunta automáticamente el ID de la petición de API Gateway en cada log, permitiendo agrupar mensajes por ejecución.
+
+# Solución de problemas (Troubleshooting)
+
+**Error común: Tiempo de inicio en frío alto**
+Asegúrate de no importar todo el SDK de AWS de golpe (evita `import AWS from 'aws-sdk'`). Adicionalmente, verifica que no estés usando de forma excesiva el `Scope.REQUEST` en tus servicios inyectables, ya que esto forzará la creación de instancias en cada llamada.

@@ -1,0 +1,43 @@
+---
+title: Logging & Tracing
+description: Structured JSON logging for CloudWatch.
+---
+
+
+Standard `console.log` statements in AWS Lambda can be difficult to parse and search in CloudWatch. Aetherion provides a structured JSON logger via the `@aetherionfw/logger` package.
+
+## The `@Logger()` Decorator
+
+You can inject the framework logger directly into your services and controllers. The logger automatically attaches context (like Request ID and X-Ray Trace IDs) to every log entry.
+
+```typescript
+import { Controller, Get } from '@aetherionfw/core';
+import { Logger, ILogger } from '@aetherionfw/logger';
+
+@Controller('/users')
+export class UserController {
+  constructor(@Logger() private readonly logger: ILogger) {}
+
+  @Get('/')
+  async getUsers() {
+    this.logger.info('Fetching all users from the database');
+    
+    try {
+      // ... logic
+    } catch (error) {
+      this.logger.error('Failed to fetch users', { error });
+    }
+  }
+}
+```
+
+## CloudWatch Integration
+
+When deployed to AWS, the logger automatically formats output as single-line JSON, allowing you to use CloudWatch Logs Insights to run complex queries:
+
+```text
+fields @timestamp, @message, level
+| filter level = "error"
+| sort @timestamp desc
+| limit 20
+```

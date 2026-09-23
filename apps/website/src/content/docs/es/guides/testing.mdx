@@ -1,0 +1,24 @@
+---
+title: Pruebas (Testing)
+description: Unit testing y emulación local.
+---
+
+
+Gracias a la inyección de dependencias nativa, probar tu código en Aetherion es tan simple como instanciar una clase TypeScript estándar, pasando objetos *mock* al constructor del controlador. ¡Sin servidores locales lentos!
+
+```typescript
+import { UserController } from './user.controller';
+
+describe('UserController', () => {
+  it('should return a user', async () => {
+    const mockUserService = {
+      findUser: jest.fn().mockResolvedValue({ id: '123', name: 'Bob' })
+    };
+
+    const controller = new UserController(mockUserService as any);
+    const result = await controller.getUser('123');
+
+    expect(result).toEqual({ id: '123', name: 'Bob' });
+  });
+});
+```

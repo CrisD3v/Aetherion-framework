@@ -1,0 +1,44 @@
+---
+title: Testing
+description: Unit testing and local emulation.
+---
+
+
+Because Aetherion relies on standard TypeScript classes and Dependency Injection, unit testing is extremely straightforward.
+
+## Unit Testing Controllers
+
+You do not need to boot up a server or instantiate the framework to test your logic. You can instantiate the class directly and pass mocked dependencies to its constructor.
+
+```typescript
+import { UserController } from './user.controller';
+
+describe('UserController', () => {
+  it('should return a user', async () => {
+    // 1. Mock the dependency
+    const mockUserService = {
+      findUser: jest.fn().mockResolvedValue({ id: '123', name: 'Bob' })
+    };
+
+    // 2. Instantiate the controller
+    const controller = new UserController(mockUserService as any);
+
+    // 3. Call the method directly
+    const result = await controller.getUser('123');
+
+    // 4. Assert
+    expect(result).toEqual({ id: '123', name: 'Bob' });
+    expect(mockUserService.findUser).toHaveBeenCalledWith('123');
+  });
+});
+```
+
+## Local Emulation
+
+For integration testing, you can use the Aetherion CLI to spin up a local emulator that mimics AWS API Gateway.
+
+```bash
+aetherion dev
+```
+
+While the emulator is running, you can run tools like Postman, `curl`, or end-to-end testing frameworks (like Cypress or Playwright) against `http://localhost:3000`.

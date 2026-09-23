@@ -1,0 +1,83 @@
+---
+title: Middlewares & Authorizers
+description: Intercepting requests and implementing custom authorization.
+---
+
+In a traditional Express.js application, middlewares are functions that run before your final route handler. Aetherion provides a similar concept using the `@UseMiddlewares` decorator, tailored for AWS Lambda.
+
+## Creating a Middleware
+
+A middleware in Aetherion is a class that implements the `Middleware` interface. It must define a `handle` method.
+
+```typescript
+// src/middlewares/logger.middleware.ts
+import { Middleware } from '@aetherionfw/core/adapter/interfaces';
+
+export class LoggerMiddleware implements Middleware {
+  async handle(event: any, context: any, next: () => Promise<any>) {
+    console.log(`[REQ] ${event.requestContext.http.method} ${event.requestContext.http.path}`);
+    
+    // Call the next middleware or the final route handler
+    const response = await next();
+    
+    console.log(`[RES] Status: ${response.statusCode}`);
+    return response;
+  }
+}
+```
+
+## Applying Middlewares
+
+You apply middlewares to your controllers or specific methods using the `@UseMiddlewares` decorator.
+
+```typescript
+import { LambdaController, Handle, Route, UseMiddlewares } from '@aetherionfw/core';
+import { LoggerMiddleware } from '../middlewares/logger.middleware';
+
+@LambdaController({ lambdaName: 'user-api' })
+// Applied to ALL methods in this controller
+@UseMiddlewares([LoggerMiddleware])
+export class UserController {
+
+  @Handle()
+  @Route({ method: 'GET', path: '/users' })
+  async getUsers() {
+    return [{ id: 1, name: 'Alice' }];
+  }
+}
+```
+
+## Custom Authorizers
+
+Because Aetherion provisions API Gateway HTTP APIs, the most efficient way to handle authorization (like validating Cognito JWTs or custom Bearer tokens) is to implement an **Authorizer Middleware**.
+
+If an authorizer middleware throws an error or returns a `401 Unauthorized` response without calling `next()`, the Lambda execution stops immediately.
+
+```typescript
+// src/middlewares/auth.middleware.ts
+import { Middleware } from '@aetherionfw/core/adapter/interfaces';
+
+export class AuthMiddleware implements Middleware {
+  async handle(event: any, context: any, next: () => Promise<any>) {
+    const authHeader = event.headers['authorization'];
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { statusCode: 401, body: 'Unauthorized' };
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      // Validate token (e.g. using aws-jwt-verify for Cognito)
+      const decoded = await verifyToken(token);
+      
+      // Inject user info into the event object for the controller to use
+      event.user = decoded;
+      
+      return await next();
+    } catch (err) {
+      return { statusCode: 403, body: 'Forbidden' };
+    }
+  }
+}
+```

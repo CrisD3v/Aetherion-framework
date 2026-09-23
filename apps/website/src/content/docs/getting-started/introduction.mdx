@@ -1,0 +1,52 @@
+---
+title: Introduction
+description: What is Aetherion and why does it exist?
+---
+
+
+Aetherion is a highly opinionated, decorator-driven TypeScript framework designed exclusively for Serverless deployments on AWS. 
+
+Its primary mission is to **banish the Lambdalith** pattern—where an entire web framework (like Express or NestJS) is bundled inside a single AWS Lambda function. While the Lambdalith is easy to deploy initially, it inevitably leads to bloated bundle sizes, slow cold starts, excessive IAM permissions, and a massive blast radius.
+
+Aetherion solves this by introducing a **1:1 Lambda Architecture**.
+
+## The 1:1 Lambda Architecture
+
+In Aetherion, you write standard TypeScript classes and use decorators to define your API routes and infrastructure. Behind the scenes, Aetherion parses your code using AST (Abstract Syntax Tree) analysis and generates precise CDKTF (Cloud Development Kit for Terraform) configurations.
+
+Every single controller method you define becomes a **completely independent, isolated AWS Lambda function**.
+
+```typescript
+import { LambdaController, Route, Handle } from '@aetherionfw/core';
+
+@LambdaController({
+  lambdaName: 'user-api',
+  runtime: 'nodejs22.x',
+  memorySize: 128,
+  timeout: 5,
+})
+export class UserController {
+  
+  // This becomes its own Lambda function
+  @Handle()
+  @Route({ method: 'GET', path: '/users' })
+  async getUsers() {
+    return { users: [] };
+  }
+
+  // This becomes another independent Lambda function
+  @Handle()
+  @Route({ method: 'POST', path: '/users' })
+  async createUser() {
+    return { success: true };
+  }
+}
+```
+
+### Why this matters
+
+1. **Microscopic Cold Starts:** Since each Lambda only contains the code for a single endpoint, the bundle size is measured in kilobytes, not megabytes. Cold starts become negligible.
+2. **True Least Privilege Security:** An endpoint that reads from S3 only gets `s3:GetObject` permissions. An endpoint that writes to DynamoDB only gets `dynamodb:PutItem`. Compromising one endpoint does not give an attacker access to your entire infrastructure.
+3. **Zero-Drift Infrastructure:** You never write `.tf` files or YAML templates manually. The infrastructure is derived natively from your application code using the `@Infra` class decorators.
+
+Ready to see it in action? Head over to the [Quick Start](/getting-started/quickstart) guide.

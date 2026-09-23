@@ -1,0 +1,34 @@
+---
+title: Troubleshooting
+description: Fixing common deployment and runtime errors.
+---
+
+
+If you run into issues while building with Aetherion, check the common scenarios below.
+
+## CDKTF Synthesis Failed
+
+**Error:** `Error: synth failed: Exit code 1`
+
+**Cause:** The TypeScript compiler encountered syntax errors, or your CDKTF configuration in `aetherion.config.ts` is invalid.
+
+**Solution:**
+1. Run `tsc --noEmit` locally to ensure there are no TypeScript errors.
+2. Ensure you haven't used incompatible Terraform provider versions.
+
+## 403 Forbidden from API Gateway
+
+**Cause:** API Gateway is rejecting the request before it reaches your Lambda.
+
+**Solution:**
+1. Ensure the HTTP method and path exactly match what is defined in your `@Get()` or `@Post()` decorators.
+2. If you are using API Keys or IAM Auth, ensure the client is sending the appropriate tokens.
+
+## Cold Starts are Too Slow
+
+**Cause:** Even with 1:1 Lambda mapping, requiring massive dependencies (like the entire AWS SDK v2, or heavy AI libraries) can bloat the bundle size.
+
+**Solution:**
+1. Always import specific modules (e.g., `import { S3Client } from '@aws-sdk/client-s3'` instead of `import * as AWS from 'aws-sdk'`).
+2. Ensure you are using `Scope.SINGLETON` for DI services to reuse instances across warm invocations.
+3. Consider enabling Provisioned Concurrency for critical endpoints in your `aetherion.config.ts`.
