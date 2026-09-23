@@ -1,0 +1,31 @@
+---
+import { testimonials } from '../../data/landing';
+---
+<section class="py-24 md:py-32 border-b border-[#30353b]/50 relative overflow-hidden">
+  <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#30353b] to-transparent"></div>
+  
+  <div class="mx-auto max-w-[1200px] px-6 text-center">
+    <h2 class="text-[32px] md:text-[40px] font-semibold tracking-[-1.6px] text-white mb-16">
+      Loved by engineers
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {testimonials.map((testimonial) => (
+        <div class="p-8 rounded-2xl bg-[#090e16] border border-[#30353b] text-left flex flex-col justify-between">
+          <p class="text-[16px] text-[#9ba0a6] leading-[1.65] mb-8">
+            "{testimonial.quote}"
+          </p>
+          <div class="flex items-center gap-4 mt-auto">
+            <div class="w-10 h-10 rounded-full bg-[#181c24] border border-[#30353b] flex items-center justify-center text-white font-medium">
+              {testimonial.name.charAt(0)}
+            </div>
+            <div>
+              <p class="text-[14px] font-semibold text-white">{testimonial.name}</p>
+              <p class="text-[12px] text-[#666666]">{testimonial.title}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

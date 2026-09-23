@@ -1,0 +1,280 @@
+---
+import { siteConfig } from "../../data/landing";
+---
+
+<header
+  class="fixed top-0 left-0 w-full z-50 border-b bg-[#090d13] border-[#1f242b]"
+>
+  <div class="mx-auto w-full px-16">
+    <div class="flex h-16 items-center justify-between">
+      <div class="flex items-center gap-8">
+        <a href="/" class="flex items-center gap-2 group">
+          {/* Brand Logo */}
+          <div
+            class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all"
+          >
+            <svg
+              class="w-5 h-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <span class="font-semibold text-[17px] tracking-tight text-[#e6edf3]"
+            >Aetherion</span
+          >
+        </a>
+
+        <nav
+          class="hidden md:flex items-center gap-6 text-[14px] font-medium text-[#7d8590]"
+        >
+          <a
+            href={siteConfig.links.docs}
+            data-i18n-key="nav.docs"
+            class="hover:text-[#e6edf3] transition-colors whitespace-nowrap"
+            >Documentation</a
+          >
+          <a
+            href="/core/decorators"
+            data-i18n-key="nav.core"
+            class="hover:text-[#e6edf3] transition-colors whitespace-nowrap"
+            >Core Concepts</a
+          >
+        </nav>
+      </div>
+
+      <div class="hidden md:flex items-center gap-4">
+        <!-- Language Select -->
+        <div class="relative group">
+          <button
+            id="lang-display"
+            class="flex items-center gap-1 text-[14px] font-medium text-[#7d8590] hover:text-[#e6edf3] transition-colors py-1"
+          >
+            <svg
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              ></path>
+            </svg>
+            <span id="current-lang">EN</span>
+          </button>
+          <div
+            class="absolute right-0 top-full mt-2 w-24 bg-[#161b22] border border-[#30353b] rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200"
+          >
+            <button
+              data-lang="en"
+              class="lang-selector w-full text-left block px-4 py-2 text-[13px] text-[#e6edf3] hover:bg-[#21262d] rounded-t-md"
+              >English</button
+            >
+            <button
+              data-lang="es"
+              class="lang-selector w-full text-left block px-4 py-2 text-[13px] text-[#7d8590] hover:text-[#e6edf3] hover:bg-[#21262d] rounded-b-md"
+              >Español</button
+            >
+          </div>
+        </div>
+
+        <!-- GitHub -->
+        <a
+          href={siteConfig.links.github}
+          target="_blank"
+          rel="noreferrer"
+          class="text-[#7d8590] hover:text-[#e6edf3] transition-colors ml-2 hidden sm:block"
+        >
+          <span class="sr-only">GitHub</span>
+          <svg
+            class="w-[18px] h-[18px]"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M15 22v-4a4.8 4.8 0 0 0-1-3.02c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+            ></path>
+          </svg>
+        </a>
+
+        {Astro.slots.has('search') && (
+          <div class="w-80 starlight-search-wrapper hidden md:block">
+            <slot name="search" />
+          </div>
+        )}
+
+        <a
+          href={siteConfig.links.docs}
+          data-i18n-key="nav.getStarted"
+          class="bg-[#e6edf3] text-black hover:bg-white transition-colors px-4 py-1.5 rounded-md text-[14px] font-medium shadow-sm"
+        >
+          Get Started
+        </a>
+      </div>
+
+      <button
+        id="mobile-menu-toggle"
+        class="md:hidden text-[#7d8590] hover:text-[#e6edf3]"
+      >
+        <svg
+          id="menu-icon"
+          class="w-6 h-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="4" y1="12" x2="20" y2="12"></line><line
+            x1="4"
+            y1="6"
+            x2="20"
+            y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line>
+        </svg>
+        <svg
+          id="close-icon"
+          class="w-6 h-6 hidden"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line><line
+            x1="6"
+            y1="6"
+            x2="18"
+            y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  {/* Mobile Menu */}
+  <div
+    id="mobile-menu"
+    class="hidden md:hidden border-t border-[#1f242b] bg-[#090d13]"
+  >
+    <div
+      class="px-6 py-4 flex flex-col gap-4 text-[14px] font-medium text-[#7d8590]"
+    >
+      <a
+        href={siteConfig.links.docs}
+        data-i18n-key="nav.docs"
+        class="hover:text-[#e6edf3]">Documentation</a
+      >
+      <a
+        href="/core/decorators"
+        data-i18n-key="nav.core"
+        class="hover:text-[#e6edf3]">Core Concepts</a
+      >
+      <a
+        href="/getting-started/quickstart"
+        data-i18n-key="nav.quickstart"
+        class="hover:text-[#e6edf3]">Quick Start</a
+      >
+      <div class="h-[1px] w-full bg-[#1f242b]"></div>
+      <a
+        href={siteConfig.links.github}
+        class="flex items-center gap-2 hover:text-[#e6edf3]"
+      >
+        <svg
+          class="w-4 h-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M15 22v-4a4.8 4.8 0 0 0-1-3.02c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+          ></path>
+        </svg> GitHub
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggleBtn = document.getElementById("mobile-menu-toggle");
+  const mobileMenu = document.getElementById("mobile-menu");
+  const menuIcon = document.getElementById("menu-icon");
+  const closeIcon = document.getElementById("close-icon");
+
+  if (toggleBtn && mobileMenu && menuIcon && closeIcon) {
+    toggleBtn.addEventListener("click", () => {
+      mobileMenu.classList.toggle("hidden");
+      menuIcon.classList.toggle("hidden");
+      closeIcon.classList.toggle("hidden");
+    });
+  }
+</script>
+
+<script>
+  import { landingI18n } from "../../i18n/landing";
+
+  function applyLanguage(lang: "en" | "es") {
+    const dict = landingI18n[lang];
+    if (!dict) return;
+
+    // Update text content of all nodes with data-i18n-key
+    document.querySelectorAll("[data-i18n-key]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-key") as keyof typeof dict;
+      if (dict[key]) {
+        el.textContent = dict[key];
+      }
+    });
+
+    // Update current lang display
+    const currentLangDisplay = document.getElementById("current-lang");
+    if (currentLangDisplay) {
+      currentLangDisplay.textContent = lang.toUpperCase();
+    }
+
+    // Store preference
+    try {
+      localStorage.setItem("landing-lang", lang);
+    } catch (e) {}
+
+    // Dispatch event for React components
+    window.dispatchEvent(new CustomEvent("languagechange", { detail: lang }));
+  }
+
+  // Initialize lang
+  const storedLang =
+    typeof localStorage !== "undefined"
+      ? (localStorage.getItem("landing-lang") as "en" | "es")
+      : "en";
+  if (storedLang === "es") {
+    applyLanguage("es");
+  }
+
+  // Bind buttons
+  document.querySelectorAll(".lang-selector").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const target = e.currentTarget as HTMLButtonElement;
+      const lang = target.getAttribute("data-lang") as "en" | "es";
+      if (lang) {
+        applyLanguage(lang);
+      }
+    });
+  });
+</script>

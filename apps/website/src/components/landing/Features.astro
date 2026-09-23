@@ -1,0 +1,47 @@
+---
+import { features } from '../../data/landing';
+import { Zap, Lock, Layers, BookOpen } from 'lucide-react';
+
+const iconMap = {
+  zap: Zap,
+  lock: Lock,
+  layers: Layers,
+  'book-open': BookOpen,
+};
+---
+
+<section class="py-24 md:py-32 relative">
+  <div class="mx-auto max-w-[1200px] px-6">
+    <div class="mb-16 md:mb-24 flex flex-col items-center text-center">
+      <h2 class="text-[32px] md:text-[48px] font-semibold tracking-[-2.4px] text-white mb-6">
+        <span data-i18n-key="features.title">Designed for scale.</span> <br/>
+        <span data-i18n-key="features.subtitle">Built for speed.</span>
+      </h2>
+      <p data-i18n-key="features.desc" class="text-[16px] md:text-[20px] text-[#9ba0a6] max-w-2xl leading-[1.6]">
+        Every feature in Aetherion is engineered to eliminate friction between your business logic and your cloud infrastructure.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {features.map((feature, index) => {
+        const Icon = iconMap[feature.icon as keyof typeof iconMap];
+        const i18nPrefix = `features.card${index + 1}`;
+        return (
+          <div class="p-6 rounded-2xl bg-[#0c1017] border border-[#30353b] hover:border-[#8b949e] transition-all duration-300 relative group overflow-hidden shadow-lg hover:shadow-purple-500/10">
+            <div class="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            
+            <div class="relative z-10">
+              <div class="w-10 h-10 rounded-full bg-[#181c24] border border-[#30353b] flex items-center justify-center mb-6 text-purple-400 group-hover:text-purple-300 transition-colors">
+                <Icon size={20} />
+              </div>
+              <h3 data-i18n-key={`${i18nPrefix}.title`} class="text-[18px] font-semibold text-white mb-3 tracking-[-0.72px]">{feature.title}</h3>
+              <p data-i18n-key={`${i18nPrefix}.desc`} class="text-[14px] text-[#9ba0a6] leading-[1.65]">
+                {feature.description}
+              </p>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  </div>
+</section>

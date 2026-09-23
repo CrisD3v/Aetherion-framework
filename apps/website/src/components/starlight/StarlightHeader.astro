@@ -1,0 +1,55 @@
+---
+import type { Props } from '@astrojs/starlight/props';
+import Navbar from '../landing/Navbar.astro';
+import Search from '@astrojs/starlight/components/Search.astro';
+---
+
+<div class="starlight-header-override fixed left-0 w-full top-0 z-50">
+  <Navbar>
+    <div slot="search" class="starlight-search-container">
+      <Search {...Astro.props} />
+    </div>
+  </Navbar>
+</div>
+
+<style is:global>
+  /* Starlight's default header is hidden, we use fixed positioning for ours */
+  /* Remove display none to avoid hiding the wrapper */
+  header.header {
+    border-bottom: none !important;
+  }
+  
+  /* Make room for our fixed navbar */
+  .page {
+    margin-top: 64px !important;
+  }
+
+  /* Style the search bar to fit our navbar aesthetic */
+  .starlight-search-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Starlight Search overrides */
+  site-search {
+    display: block;
+    width: 100%;
+  }
+  
+  .starlight-search-container button {
+    background-color: #161b22 !important;
+    border: 1px solid #30353b !important;
+    color: #7d8590 !important;
+    border-radius: 6px !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 14px !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  
+  .starlight-search-container button:hover {
+    border-color: #8b949e !important;
+    color: #e6edf3 !important;
+  }
+</style>

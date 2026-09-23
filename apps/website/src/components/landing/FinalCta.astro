@@ -1,0 +1,20 @@
+---
+import { siteConfig } from '../../data/landing';
+---
+<section class="py-24 md:py-32 px-6 bg-[#090d13] border-t border-[#1f242b] relative overflow-hidden">
+  
+  <div class="mx-auto max-w-4xl text-center relative z-10">
+    <h2 data-i18n-key="cta.title" class="text-[40px] md:text-[56px] font-semibold tracking-[-3.36px] text-white mb-8">
+      Start building today.
+    </h2>
+    <p data-i18n-key="cta.desc" class="text-[18px] md:text-[22px] text-[#7d8590] mb-12 max-w-2xl mx-auto leading-relaxed">
+      Open source, highly opinionated, and ready for production.<br/> Eliminate the infrastructure boilerplate.
+    </p>
+    
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href={siteConfig.links.docs} data-i18n-key="cta.btn" class="w-full sm:w-auto px-8 py-4 rounded-md bg-white text-black text-[16px] font-semibold hover:bg-[#e6edf3] hover:scale-[1.02] transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+        Get Started for Free
+      </a>
+    </div>
+  </div>
+</section>
