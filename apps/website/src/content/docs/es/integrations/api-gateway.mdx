@@ -1,38 +1,192 @@
 ---
 title: Integración API Gateway
-description: Cómo Aetherion mapea controladores a endpoints de AWS API Gateway.
+description: Cómo configurar API Gateways REST y HTTP en Aetherion usando el decorador @ApiGateway.
 ---
 
-Aetherion abstrae la complejidad de configurar AWS API Gateway manualmente. El framework utiliza un enfoque de **mapeo 1:1** para aprovisionar y configurar automáticamente un endpoint de API Gateway por cada ruta que definas.
+Aetherion ofrece soporte nativo para AWS API Gateway. Puedes crear nuevos gateways o importar existentes, y el framework conecta automáticamente tus decoradores `@Route` a los recursos, métodos e integraciones correctos.
 
-## Creación Implícita
+## Definir un API Gateway
 
-No necesitas usar un decorador `@Infra` para crear un API Gateway. El API Gateway se **crea implícitamente** en el momento en que usas el decorador `@Route` en cualquier método dentro de un `@LambdaController`.
+Usa el decorador de propiedad `@ApiGateway` dentro de una clase `@Infra` para definir tu gateway:
+
+```typescript
+import { Infra, ApiGateway } from '@aetherionfw/core';
+
+@Infra()
+class AppInfra {
+  @ApiGateway({
+    name: 'main-api',
+    type: 'REST',
+    stageName: 'prod',
+    corsEnabled: true,
+  })
+  mainApi: any;
+}
+```
+
+### Opciones de Configuración
+
+| Opción | Tipo | Default | Descripción |
+|---|---|---|---|
+| `name` | `string` | **requerido** | Nombre único para identificar este API Gateway |
+| `type` | `'REST' \| 'HTTP'` | **requerido** | REST API (control total) o HTTP API (más simple, más económico) |
+| `description` | `string` | auto-generado | Descripción para el recurso API |
+| `stageName` | `string` | `'dev'` | Nombre del stage de despliegue |
+| `corsEnabled` | `boolean` | `true` | Habilitar respuestas preflight CORS (REST API) |
+| `corsOrigins` | `string[]` | `['*']` | Orígenes CORS permitidos |
+| `existingApiId` | `string` | — | Importar un API existente en vez de crear uno nuevo |
+| `existingRootResourceId` | `string` | — | ID del recurso raíz (requerido para REST APIs existentes) |
+
+## Vincular Controladores a un Gateway
+
+Usa el campo `apiGateway` en `@LambdaController` para vincular las rutas de un controlador a un API Gateway específico:
 
 ```typescript
 import { LambdaController, Handle, Route } from '@aetherionfw/core';
 
-@LambdaController({ lambdaName: 'user-api' })
+@LambdaController({
+  lambdaName: 'user-api',
+  runtime: 'nodejs22.x',
+  memorySize: 128,
+  timeout: 5,
+  apiGateway: 'main-api', // Debe coincidir con un nombre de @ApiGateway
+})
 export class UserController {
-  
   @Handle()
-  // Esto aprovisiona automáticamente una ruta en API Gateway HTTP API
   @Route({ method: 'GET', path: '/users' })
   async getUsers() {
-    return [];
+    return { users: [] };
+  }
+
+  @Handle()
+  @Route({ method: 'POST', path: '/users' })
+  async createUser() {
+    return { success: true };
+  }
+
+  @Handle()
+  @Route({ method: 'GET', path: '/users/{id}' })
+  async getUserById() {
+    return { user: {} };
   }
 }
 ```
 
-Cuando despliegas tu aplicación usando el CLI (`pnpm aetherion deploy`), el constructor CDKTF de Aetherion realiza los siguientes pasos:
+### Qué se Genera Automáticamente
 
-1. Crea un **AWS API Gateway (HTTP API)** para tu entorno (stage).
-2. Crea una **Integración** entre el API Gateway y tu función Lambda 1:1 específica.
-3. Crea una **Ruta** que coincide con el `method` y `path` especificados en tu decorador `@Route`.
-4. Otorga a API Gateway el permiso para invocar tu función Lambda (`lambda:InvokeFunction`).
+Cuando despliegas, el constructor CDKTF de Aetherion genera automáticamente:
 
-## CORS y Dominios Personalizados
+1. **Recurso API Gateway** — `ApiGatewayRestApi` o `Apigatewayv2Api` según el `type`.
+2. **Recursos Jerárquicos** — Para un path como `/users/{id}/orders`, se crean tres recursos: `/users`, `/users/{id}` y `/users/{id}/orders`.
+3. **Métodos e Integraciones** — Cada `@Route` produce un método con una integración `AWS_PROXY` apuntando a la función Lambda 1:1 correspondiente.
+4. **Permisos Lambda** — `lambda:InvokeFunction` se otorga automáticamente a API Gateway por cada integración.
+5. **Deployment y Stage** — Se crean un deployment y un stage con el `stageName` configurado.
+6. **CORS** — Para REST APIs, se agrega un método `OPTIONS` con integración MOCK a cada recurso cuando `corsEnabled` está activo.
 
-Por defecto, el API Gateway aprovisionado automáticamente viene con configuraciones de CORS abiertas diseñadas para desarrollo.
+## REST vs HTTP API
 
-En futuras versiones de Aetherion, podrás personalizar las propiedades del API Gateway (como dominios personalizados, reglas estrictas de CORS y autorizadores) globalmente en tu archivo `aetherion.config.ts`.
+| Característica | REST API | HTTP API |
+|---|---|---|
+| **Costo** | Mayor | ~70% más económico |
+| **Latencia** | Mayor | Menor |
+| **Autorizadores** | Cognito, Lambda, IAM | JWT, Lambda |
+| **API Keys** | Sí | No |
+| **Validación de Request** | Sí | No |
+| **CORS** | Manual (auto-generado por Aetherion) | Integrado |
+| **Caso de Uso** | APIs de producción con control total | Microservicios ligeros |
+
+```typescript
+// REST API — control total, autorizadores Cognito, API keys
+@ApiGateway({ name: 'public-api', type: 'REST', stageName: 'prod' })
+publicApi: any;
+
+// HTTP API — más económico, menor latencia, CORS automático
+@ApiGateway({ name: 'internal-api', type: 'HTTP', stageName: 'dev' })
+internalApi: any;
+```
+
+## Usar un API Gateway Existente
+
+Si ya tienes un API Gateway provisionado en tu cuenta de AWS, puedes importarlo en lugar de crear uno nuevo:
+
+```typescript
+@Infra()
+class AppInfra {
+  @ApiGateway({
+    name: 'legacy-api',
+    type: 'REST',
+    existingApiId: 'abc123xyz',
+    existingRootResourceId: 'rootres123',
+    stageName: 'prod',
+  })
+  legacyApi: any;
+}
+```
+
+Cuando se proporciona `existingApiId`:
+- No se crea un nuevo recurso de API Gateway.
+- Las nuevas rutas, métodos e integraciones se **agregan** al API existente.
+- La configuración del stage existente se preserva.
+
+> **Importante**: Debes proporcionar `existingRootResourceId` para REST APIs. Puedes encontrarlo en la Consola de AWS bajo API Gateway, Resources, en el recurso `/` (raíz).
+
+## Autorizadores
+
+Aetherion conecta automáticamente autorizadores Cognito cuando referencias un `@CognitoUserPool` en el campo `authorizer` de `@Route`:
+
+```typescript
+@Infra()
+class AppInfra {
+  @CognitoUserPool({ name: 'app-users' })
+  authPool: any;
+
+  @ApiGateway({ name: 'secure-api', type: 'REST', stageName: 'prod' })
+  api: any;
+}
+
+@LambdaController({
+  lambdaName: 'order-api',
+  apiGateway: 'secure-api',
+})
+export class OrderController {
+  @Handle()
+  @Route({ method: 'GET', path: '/orders' })
+  async listOrders() {
+    // Endpoint público — sin autorizador
+    return { orders: [] };
+  }
+
+  @Handle()
+  @Route({ method: 'POST', path: '/orders', authorizer: 'app-users' })
+  async createOrder() {
+    // Protegido — requiere token JWT de Cognito
+    return { success: true };
+  }
+}
+```
+
+El framework:
+1. Busca el Cognito User Pool llamado `app-users` en los recursos `@Infra`.
+2. Crea un `ApiGatewayAuthorizer` de tipo `COGNITO_USER_POOLS`.
+3. Lo adjunta al método `POST /orders`.
+4. Reutiliza el mismo autorizador para cualquier otra ruta que referencie `app-users`.
+
+## Solución de Problemas
+
+### "API Gateway not found for controller"
+
+Esta advertencia significa que el nombre `apiGateway` en `@LambdaController` no coincide con ningún `name` de `@ApiGateway` en tu clase `@Infra`. Verifica la ortografía y las mayúsculas/minúsculas.
+
+### "Authorizer references a Cognito User Pool that was not found"
+
+El valor de `authorizer` en `@Route` debe coincidir exactamente con la propiedad `name` de un `@CognitoUserPool` definido en una clase `@Infra`.
+
+### Las rutas no aparecen en API Gateway
+
+Asegúrate de que cada método de ruta tenga **ambos** decoradores `@Handle()` y `@Route()`. Un método con solo `@Route` no generará una función Lambda, por lo que no hay nada que integrar.
+
+### Errores de CORS en el navegador
+
+Para REST APIs, Aetherion auto-genera métodos `OPTIONS` cuando `corsEnabled: true` (por defecto). Si aún ves errores de CORS:
+- Verifica que el origen de tu frontend esté incluido en `corsOrigins`.
+- Comprueba que la respuesta de tu Lambda incluya headers `Access-Control-Allow-Origin`.
