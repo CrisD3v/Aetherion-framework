@@ -28,7 +28,9 @@ import { Apigatewayv2Api } from '@cdktf/provider-aws/lib/apigatewayv2-api';
 import { Apigatewayv2Integration } from '@cdktf/provider-aws/lib/apigatewayv2-integration';
 import { Apigatewayv2Route } from '@cdktf/provider-aws/lib/apigatewayv2-route';
 import { Apigatewayv2Stage } from '@cdktf/provider-aws/lib/apigatewayv2-stage';
-import { MetadataRegistry, ApiGatewayMetadata } from '@aetherionfw/core';
+import { MetadataRegistry, ApiGatewayMetadata, AetherionConfig } from '@aetherionfw/core';
+import * as path from 'path';
+import * as fs from 'fs';
 
 interface ApiGatewayRef {
   metadata: ApiGatewayMetadata;
@@ -44,6 +46,46 @@ interface ApiGatewayRef {
 }
 
 export class FrameworkStack extends TerraformStack {
+  /**
+   * Resolves and loads `aetherion.config.ts` from the current working directory.
+   * Falls back to safe defaults if no config file is found.
+   */
+  private static loadConfig(): AetherionConfig {
+    const configPath = path.resolve(process.cwd(), 'aetherion.config.ts');
+    const configJsPath = path.resolve(process.cwd(), 'aetherion.config.js');
+
+    let resolvedPath: string | null = null;
+    if (fs.existsSync(configPath)) resolvedPath = configPath;
+    else if (fs.existsSync(configJsPath)) resolvedPath = configJsPath;
+
+    if (!resolvedPath) {
+      console.warn(
+        '[Aetherion] No aetherion.config.ts found. Using default AWS provider settings.\n' +
+        '  Run `aetherion init` to scaffold a config file, or create aetherion.config.ts manually.'
+      );
+      return {
+        accountId: process.env.AWS_ACCOUNT_ID ?? '',
+        region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+        profile: process.env.AWS_PROFILE,
+      };
+    }
+
+    try {
+      // Use require for .js, ts-node/register path for .ts
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require(resolvedPath);
+      const config: AetherionConfig = mod.default ?? mod;
+      return {
+        accountId: process.env.AWS_ACCOUNT_ID ?? config.accountId,
+        region: process.env.AWS_REGION ?? config.region,
+        profile: process.env.AWS_PROFILE ?? config.profile,
+      };
+    } catch (err) {
+      console.error(`[Aetherion] Failed to load aetherion.config.ts: ${(err as Error).message}`);
+      process.exit(1);
+      throw new Error('unreachable'); // satisfy TypeScript return type
+    }
+  }
   /** All created Lambda functions indexed by their function name */
   private lambdaFunctions: Map<string, LambdaFunction> = new Map();
   /** All created Cognito User Pools indexed by their props.name */
@@ -52,8 +94,12 @@ export class FrameworkStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
+    const config = FrameworkStack.loadConfig();
+
     new AwsProvider(this, 'AWS', {
-      region: 'us-east-1',
+      region: config.region,
+      ...(config.profile ? { profile: config.profile } : {}),
+      ...(config.accountId ? { allowedAccountIds: [config.accountId] } : {}),
     });
 
     const registry = MetadataRegistry.getInstance();
