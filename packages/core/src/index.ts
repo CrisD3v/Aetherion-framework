@@ -8,3 +8,4 @@ export * from './decorators/use-middlewares.decorator';
 export * from './di/Injector';
 export * from './adapter/interfaces';
 export * from './adapter/lambda-adapter';
+export * from './config/defineConfig';
