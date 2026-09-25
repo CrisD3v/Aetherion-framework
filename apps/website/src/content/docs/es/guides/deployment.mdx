@@ -1,0 +1,98 @@
+---
+title: Despliegue y Entorno
+description: Cómo configurar credenciales de AWS, desplegar tu proyecto Aetherion y gestionar entornos.
+---
+
+Desplegar una aplicación Aetherion implica sintetizar la definición de tu infraestructura en Terraform JSON y aplicarla a tu cuenta de AWS. Aetherion proporciona un flujo de trabajo optimizado para configurar tu entorno y desplegar con un solo comando.
+
+## Configuración
+
+Aetherion utiliza el archivo `aetherion.config.ts` ubicado en la raíz de tu proyecto para configurar el entorno de despliegue.
+
+Este archivo exporta un objeto de configuración envuelto en el helper `defineConfig` para proporcionar tipado estricto y autocompletado en el IDE.
+
+```typescript
+// aetherion.config.ts
+import { defineConfig } from '@aetherionfw/core';
+import 'dotenv/config';
+
+export default defineConfig({
+  // Tu AWS Account ID
+  accountId: process.env.AWS_ACCOUNT_ID!,
+
+  // Región de AWS objetivo
+  region: process.env.AWS_REGION ?? 'us-east-1',
+
+  // Perfil nominal de AWS CLI (opcional, usado para desarrollo local)
+  profile: process.env.AWS_PROFILE ?? 'default',
+});
+```
+
+### Variables de Entorno
+
+Recomendamos utilizar variables de entorno (mediante un archivo `.env`) para información sensible y configuraciones específicas del entorno. La plantilla por defecto incluye `dotenv` para cargar estas variables automáticamente.
+
+```env title=".env"
+AWS_ACCOUNT_ID=123456789012
+AWS_REGION=us-east-1
+AWS_PROFILE=default
+```
+
+El uso de variables de entorno facilita la sobreescritura de la configuración en flujos de CI/CD sin necesidad de modificar el código fuente.
+
+## Verificación de Conexión AWS
+
+Antes de desplegar, es muy recomendable verificar que Aetherion pueda conectarse a tu cuenta de AWS utilizando las credenciales configuradas.
+
+Aetherion proporciona el comando `check-env`, que utiliza la acción `STS GetCallerIdentity` del SDK de AWS para validar tu conexión.
+
+```bash
+aetherion check-env
+```
+
+**Ejemplo de salida:**
+```
+✔ AWS connection verified successfully!
+
+  Identity:
+    Account : 123456789012
+    UserId  : AIDAXXXXXXXXXXXXXXXXX
+    ARN     : arn:aws:iam::123456789012:user/aetherion-deployer
+    Region  : us-east-1
+    Profile : default
+
+  ✔ Account matches aetherion.config.ts (123456789012)
+```
+
+Si el ID de cuenta devuelto por AWS no coincide con el definido en tu `aetherion.config.ts`, el CLI mostrará una advertencia para evitar despliegues accidentales en la cuenta equivocada.
+
+## Desplegar
+
+Una vez configurado y verificado tu entorno, puedes proceder a desplegar tu aplicación. Aetherion se encarga de sintetizar la infraestructura CDKTF y ejecutar el despliegue en un solo paso.
+
+```bash
+aetherion deploy
+```
+
+En segundo plano, este comando ejecuta `cdktf deploy --auto-approve`. Verás la salida de Terraform directamente en tu consola, mostrando los recursos que se crean, actualizan o destruyen.
+
+### Despliegue en CI/CD
+
+Al desplegar desde un pipeline de CI/CD (como GitHub Actions), normalmente no utilizarás un perfil local de AWS. En su lugar, debes configurar roles de IAM o variables de entorno directamente en el runner (el entorno de ejecución).
+
+En este caso, deja la variable `AWS_PROFILE` vacía y asegúrate de que `AWS_REGION` y `AWS_ACCOUNT_ID` estén configuradas en el entorno del pipeline.
+
+```yaml title=".github/workflows/deploy.yml"
+steps:
+  - name: Configure AWS Credentials
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: arn:aws:iam::123456789012:role/my-github-actions-role
+      aws-region: us-east-1
+
+  - name: Deploy Aetherion
+    run: pnpm run deploy
+    env:
+      AWS_ACCOUNT_ID: 123456789012
+      AWS_REGION: us-east-1
+```
