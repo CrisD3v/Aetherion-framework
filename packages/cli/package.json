@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@aetherionfw/docs": "workspace:*",
+    "@aws-sdk/client-sts": "^3.0.0",
+    "@aws-sdk/credential-providers": "^3.0.0",
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
     "fs-extra": "^11.1.1",

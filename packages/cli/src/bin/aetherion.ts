@@ -6,6 +6,7 @@ import { initCommand } from '../commands/init';
 import { synthCommand } from '../commands/synth';
 import { deployCommand } from '../commands/deploy';
 import { docsCommand } from '../commands/docs';
+import { checkEnvCommand } from '../commands/check-env';
 
 const program = new Command();
 
@@ -34,6 +35,11 @@ program
   .description('Generate OpenAPI documentation')
   .option('-s, --serve', 'Serve the documentation using Scalar UI locally')
   .action(docsCommand);
+
+program
+  .command('check-env')
+  .description('Verify AWS credentials and connection using STS GetCallerIdentity')
+  .action(checkEnvCommand);
 
 program.parse(process.argv);
 
