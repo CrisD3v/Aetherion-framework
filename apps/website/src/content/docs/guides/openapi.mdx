@@ -1,0 +1,78 @@
+---
+title: OpenAPI & Scalar
+description: Generate and view interactive API documentation for your Aetherion applications.
+---
+
+Aetherion makes it incredibly simple to generate and view API documentation. Since you define your routes using decorators like `@Route({ method: 'GET', path: '/users' })`, the framework already knows the structure of your API.
+
+Aetherion leverages this metadata to automatically generate an **OpenAPI (Swagger)** specification and serves an interactive UI using [Scalar](https://scalar.com/).
+
+## Generating the Documentation
+
+To generate your API documentation, simply use the Aetherion CLI:
+
+```bash
+aetherion docs
+```
+
+This command scans your codebase, extracts the route metadata, and generates an `openapi.json` file in the root of your project. This file can be used with tools like Postman, Swagger UI, or any other OpenAPI-compatible ecosystem.
+
+## Interactive UI with Scalar
+
+While having a static `openapi.json` file is useful, Aetherion provides a built-in interactive server to visualize and test your API endpoints locally.
+
+To generate the documentation and instantly start the interactive server, pass the `--serve` flag:
+
+```bash
+aetherion docs --serve
+```
+
+When you run this command, Aetherion will:
+1. Update or generate the `openapi.json` file locally.
+2. Start the built-in Scalar web server on port `3000`.
+3. **Automatically open your default browser** to `http://localhost:3000/docs`.
+
+### What is Scalar?
+
+[Scalar](https://scalar.com/) is a modern, lightweight API reference generator. It provides a beautiful, responsive UI that allows you to:
+- Browse all your endpoints.
+- View HTTP methods, paths, and descriptions.
+- Test your API endpoints directly from the browser by sending requests to your local environment.
+
+## Adding Descriptions to Routes
+
+You can enrich your API documentation by providing descriptions directly in your `@Route` decorators. Aetherion will automatically include these descriptions in the generated OpenAPI specification.
+
+```typescript
+import { LambdaController, Route, Handle } from '@aetherionfw/core';
+
+@LambdaController({ lambdaName: 'users-api', apiGateway: 'main-api' })
+export class UserController {
+  
+  @Handle()
+  @Route({ 
+    method: 'GET', 
+    path: '/users',
+    description: 'Retrieves a list of all active users in the system.' // This appears in Scalar!
+  })
+  async listUsers() {
+    return { users: [] };
+  }
+}
+```
+
+## Continuous Integration
+
+Because `aetherion docs` creates a static `openapi.json` file, you can easily include this command in your CI/CD pipelines to ensure your API documentation is always up to date with your codebase.
+
+```yaml title=".github/workflows/docs.yml"
+steps:
+  - name: Generate OpenAPI Spec
+    run: pnpm run docs
+
+  - name: Upload Spec Artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: openapi-spec
+      path: openapi.json
+```

@@ -80,6 +80,7 @@ export default defineConfig({
           translations: { es: 'Guías y Mejores Prácticas' },
           items: [
             { label: 'Deployment & Environment', slug: 'guides/deployment', translations: { es: 'Despliegue y Entorno' } },
+            { label: 'OpenAPI & Scalar', slug: 'guides/openapi', translations: { es: 'OpenAPI y Scalar' } },
             { label: 'Testing', slug: 'guides/testing', translations: { es: 'Pruebas' } },
             { label: 'Logging & Tracing', slug: 'guides/logging', translations: { es: 'Logs y Trazabilidad' } },
             { label: 'Troubleshooting', slug: 'guides/troubleshooting', translations: { es: 'Solución de problemas' } },

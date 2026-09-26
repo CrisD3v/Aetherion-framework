@@ -3,9 +3,9 @@ import ora from 'ora';
 // Assuming the CLI runs in an environment where @aetherionfw/docs is accessible
 // For a global CLI, we might need to dynamically import it from the user's workspace
 import { generateStaticDocs, startScalarServer } from '@aetherionfw/docs';
-
 import * as path from 'path';
 import * as fs from 'fs';
+import open from 'open';
 
 export async function docsCommand(options: any) {
   const isServe = options.serve;
@@ -26,12 +26,19 @@ export async function docsCommand(options: any) {
       spinner.warn(chalk.yellow('src/app.module.ts not found. API documentation might be empty.'));
     }
 
+    // Always generate the static docs
+    generateStaticDocs(process.cwd());
+
     if (isServe) {
       spinner.succeed(chalk.green('Starting Scalar API Reference Server...'));
       startScalarServer(3000);
+      
+      const url = 'http://localhost:3000/docs';
+      console.log(chalk.cyan(`\nOpening browser at ${url}`));
+      await open(url);
+      
       // Keep process alive
     } else {
-      generateStaticDocs(process.cwd());
       spinner.succeed(chalk.green('Documentation generated at openapi.json'));
     }
   } catch (err: any) {
