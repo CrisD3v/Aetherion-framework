@@ -41,20 +41,23 @@ When you run this command, Aetherion will:
 
 ## Adding Descriptions to Routes
 
-You can enrich your API documentation by providing descriptions directly in your `@Route` decorators. Aetherion will automatically include these descriptions in the generated OpenAPI specification.
+You can enrich your API documentation by using the dedicated OpenAPI decorators like `@ApiOperation`. Aetherion will automatically include these details in the generated OpenAPI specification.
 
 ```typescript
 import { LambdaController, Route, Handle } from '@aetherionfw/core';
+import { ApiOperation, ApiResponse, ApiTag } from '@aetherionfw/docs';
 
+@ApiTag('Users', 'User management endpoints')
 @LambdaController({ lambdaName: 'users-api', apiGateway: 'main-api' })
 export class UserController {
   
   @Handle()
-  @Route({ 
-    method: 'GET', 
-    path: '/users',
+  @Route({ method: 'GET', path: '/users' })
+  @ApiOperation({
+    summary: 'List users',
     description: 'Retrieves a list of all active users in the system.' // This appears in Scalar!
   })
+  @ApiResponse({ status: 200, description: 'Success' })
   async listUsers() {
     return { users: [] };
   }

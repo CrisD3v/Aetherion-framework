@@ -1,117 +1,204 @@
 ---
-title: Decorators
-description: Defining routes, logic, and infrastructure using TypeScript decorators.
+title: Decorators Reference
+description: Comprehensive reference for all Aetherion TypeScript decorators.
 ---
 
+In Aetherion, decorators are the single source of truth for both your application logic and your cloud infrastructure. This reference provides the exact typings and usage for all available decorators across the framework.
 
-In Aetherion, decorators are the single source of truth for both your application logic and your cloud infrastructure. 
+---
 
-## The Controller
+## Core Decorators (`@aetherionfw/core`)
 
-The `@LambdaController()` decorator marks a class as a Lambda handler. You configure the Lambda properties directly within the decorator, such as runtime and memory size.
+### `@LambdaController()`
+Marks a class as a serverless controller and defines the AWS Lambda properties.
+
+**Signature**: `@LambdaController(metadata: ControllerMetadata)`
+
+**Properties (`ControllerMetadata`)**:
+- `lambdaName` (string): **Required.** The logical name of the Lambda function.
+- `runtime` (string): The AWS Lambda runtime (default is typically inferred, e.g., `nodejs20.x`).
+- `memorySize` (number): The memory allocated to the function in MB (e.g., `256`, `512`).
+- `timeout` (number): The function execution timeout in seconds.
+- `layers` (string[]): Array of ARNs for Lambda layers to attach.
+- `apiGateway` (string): The logical name of the API Gateway to bind the routes to.
 
 ```typescript
-import { LambdaController } from '@aetherionfw/core';
-
 @LambdaController({
-  lambdaName: 'product-api',
-  runtime: 'nodejs22.x',
-  memorySize: 256,
-  timeout: 10,
+  lambdaName: 'users-api',
+  memorySize: 512,
+  timeout: 30,
+  apiGateway: 'main-api'
 })
-export class ProductController {
-  // ...
-}
+export class UserController {}
 ```
 
-## Routing and Handling
+### `@Handle()`
+Marks a method as the entry point for the Lambda invocation.
 
-Every method you want to expose as an endpoint must have the `@Handle()` and `@Route()` decorators.
+**Signature**: `@Handle(options?: { timeout?: number; memorySize?: number })`
 
-- `@Handle()`: Tells the Aetherion compiler that this method is the entrypoint for the Lambda function.
-- `@Route({ method, path })`: Binds the Lambda function to an AWS API Gateway endpoint.
+*Note: Overrides the `timeout` or `memorySize` defined at the controller level.*
 
-```typescript
-import { LambdaController, Handle, Route } from '@aetherionfw/core';
+### `@Route()`
+Binds the method to an API Gateway route.
 
-@LambdaController({ lambdaName: 'product-api' })
-export class ProductController {
-  
-  @Handle()
-  @Route({ method: 'GET', path: '/products' })
-  async getProducts() {
-    return [];
-  }
+**Signature**: `@Route(metadata: RouteMetadata)`
 
-  @Handle()
-  @Route({ method: 'POST', path: '/products' })
-  async createProduct() {
-    return { created: true };
-  }
-}
-```
-
-## OpenAPI Documentation
-
-Aetherion includes native OpenAPI 3.0 support via `@aetherionfw/docs`. You can document your API directly on the controller methods, ensuring your swagger definitions are always in sync with your logic.
-
-- `@ApiTag()`: Groups endpoints together.
-- `@ApiOperation()`: Documents the specific endpoint's summary and description.
-- `@ApiResponse()`: Documents expected HTTP status codes and return types.
+**Properties (`RouteMetadata`)**:
+- `method` (string): **Required.** HTTP method (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `ANY`).
+- `path` (string): **Required.** The URL path (e.g., `/users/{id}`).
+- `authorizer` (string): The ID or logical name of an API Gateway authorizer.
 
 ```typescript
-import { ApiTag, ApiOperation, ApiResponse } from '@aetherionfw/docs';
-
-@ApiTag('Products', 'Product management endpoints')
-@LambdaController({ lambdaName: 'product-api' })
-export class ProductController {
-  
-  @Handle()
-  @Route({ method: 'GET', path: '/products' })
-  @ApiOperation({
-    summary: 'List products',
-    description: 'Returns a paginated list of products.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Success',
-  })
-  async getProducts() {
-    return [];
-  }
-}
-```
-
-## Middlewares
-
-You can intercept and modify requests using the `@UseMiddlewares()` decorator. 
-
-```typescript
-import { UseMiddlewares } from '@aetherionfw/core';
-import { AuthMiddleware } from '../middlewares/auth.middleware';
-
 @Handle()
-@Route({ method: 'POST', path: '/secure-data' })
-@UseMiddlewares(AuthMiddleware)
-async secureEndpoint() {
-  return { secure: true };
+@Route({ method: 'GET', path: '/users' })
+async listUsers() {}
+```
+
+### `@SqsTrigger()`
+Triggers the Lambda function from an SQS Queue instead of API Gateway.
+
+**Signature**: `@SqsTrigger(queueName: string, options?: any)`
+
+```typescript
+@Handle()
+@SqsTrigger('image-processing-queue', { batchSize: 10 })
+async processQueue(event: any) {}
+```
+
+### `@IamPermissions()`
+Grants the Lambda function specific IAM permissions. Can be applied to a class or a specific method.
+
+**Signature**: `@IamPermissions(permissions: Record<string, any>)`
+
+```typescript
+@IamPermissions({
+  actions: ['dynamodb:PutItem', 'dynamodb:GetItem'],
+  resources: ['arn:aws:dynamodb:*:*:table/UsersTable']
+})
+export class UserController {}
+```
+
+### `@UseMiddlewares()`
+Attaches middlewares to intercept and process requests before they reach the handler. Can be applied to a class or method.
+
+**Signature**: `@UseMiddlewares(...middlewares: Type<Middleware>[])`
+
+```typescript
+@UseMiddlewares(AuthMiddleware, LoggingMiddleware)
+async secureEndpoint() {}
+```
+
+### `@Injectable()`
+Marks a class as a provider that can be injected as a dependency.
+
+**Signature**: `@Injectable()`
+
+### `@Module()`
+Groups related controllers, providers, and infrastructure.
+
+**Signature**: `@Module(metadata: ModuleMetadata)`
+
+**Properties (`ModuleMetadata`)**:
+- `name` (string): **Required.** The module logical name.
+- `imports` (any[]): Other modules to import.
+- `providers` (any[]): Injectable services.
+- `controllers` (any[]): Lambda controllers.
+- `infra` (any[]): Infrastructure classes.
+
+---
+
+## Infrastructure Decorators (`@aetherionfw/core`)
+
+These decorators are used to provision AWS resources declaratively. They are typically placed in a class marked with `@Infra()`.
+
+### `@Infra()`
+Marks a class as an infrastructure definition container.
+
+### `@ApiGateway()`
+Provisions an API Gateway.
+
+**Signature**: `@ApiGateway(props: ApiGatewayMetadata)`
+
+**Properties (`ApiGatewayMetadata`)**:
+- `name` (string): **Required.** Logical name.
+- `type` (`'REST' | 'HTTP'`): **Required.** Type of gateway.
+- `description` (string): API description.
+- `stageName` (string): Deployment stage (e.g., `prod`, `dev`).
+- `corsEnabled` (boolean): Enable CORS default behavior.
+- `corsOrigins` (string[]): Allowed CORS origins.
+
+### Resource Decorators
+All resource decorators share a similar signature: `@ResourceDecorator(props)`
+
+- `@S3Bucket({ name: string; versioned?: boolean; private?: boolean })`
+- `@DynamoTable({ name: string; partitionKey: any })`
+- `@SqsQueue({ name: string; visibilityTimeout?: number; deadLetterQueue?: string })`
+- `@KmsKey({ alias?: string; description?: string })`
+- `@SsmParameter({ name: string; value: string; type?: string })`
+- `@EventBridgeRule({ name: string; scheduleExpression?: string })`
+- `@CloudFrontDistribution({ originDomain: string })`
+- `@CognitoUserPool({ name: string })`
+- `@Vpc({ name: string; cidr: string; natGateways?: number })`
+- `@IamRole({ name: string; assumedBy: string })`
+- `@RdsInstance({ engine: string; size: string; dbName: string })`
+
+```typescript
+@Infra()
+export class MyInfra {
+  @S3Bucket({ name: 'my-uploads-bucket', versioned: true })
+  uploadsBucket: any;
+
+  @DynamoTable({ name: 'Users', partitionKey: { name: 'id', type: 'S' } })
+  usersTable: any;
 }
 ```
 
-## SQS Triggers
+---
 
-If your Lambda should be triggered by an SQS queue instead of API Gateway, use `@SqsTrigger()`.
+## OpenAPI Decorators (`@aetherionfw/docs`)
+
+Use these decorators on your controllers to automatically generate Swagger documentation.
+
+### `@ApiTag()`
+Groups endpoints in the Swagger UI.
+
+**Signature**: `@ApiTag(name: string, description?: string)`
+
+### `@ApiOperation()`
+Documents the endpoint's purpose.
+
+**Signature**: `@ApiOperation(metadata: ApiOperationMetadata)`
+
+**Properties (`ApiOperationMetadata`)**:
+- `summary` (string): A short summary.
+- `description` (string): Detailed description.
+- `deprecated` (boolean): Mark endpoint as deprecated.
+
+### `@ApiResponse()`
+Documents the expected HTTP response.
+
+**Signature**: `@ApiResponse(metadata: ApiResponseMetadata)`
+
+**Properties (`ApiResponseMetadata`)**:
+- `status` (number): HTTP status code (e.g., `200`, `404`).
+- `description` (string): Explanation of the response.
+- `type` (any): The expected return type/schema.
+
+### `@ApiProperty()`
+Documents properties within Data Transfer Objects (DTOs).
+
+**Signature**: `@ApiProperty(metadata: Omit<ApiPropertyMetadata, 'name'>)`
+
+**Properties (`ApiPropertyMetadata`)**:
+- `type` (string): The data type (e.g., `'string'`, `'number'`, `'boolean'`).
+- `description` (string): Property description.
+- `required` (boolean): Whether the property is mandatory.
+- `example` (any): An example value.
 
 ```typescript
-import { LambdaController, Handle, SqsTrigger } from '@aetherionfw/core';
-
-@LambdaController({ lambdaName: 'worker' })
-export class WorkerController {
-  
-  @Handle()
-  @SqsTrigger('image-processing-queue', { batchSize: 10 })
-  async processMessage(event: any) {
-    // Process SQS event
-  }
+export class CreateUserDto {
+  @ApiProperty({ type: 'string', required: true, example: 'john@doe.com' })
+  email: string;
 }
 ```
