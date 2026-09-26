@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="public/Aetherion-banner.jpg" alt="Aetherion Framework Banner" />
+</p>
+
+<p align="center">
   <h1 align="center">Aetherion Framework</h1>
 </p>
 

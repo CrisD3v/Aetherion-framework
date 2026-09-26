@@ -7,6 +7,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Aetherion',
+      favicon: '/favicon.ico',
       customCss: ['./src/styles/global.css'],
       components: {
         Header: './src/components/starlight/StarlightHeader.astro',
