@@ -42,6 +42,7 @@ export async function initCommand(projectName: string) {
         "@aetherionfw/docs": "latest"
       },
       devDependencies: {
+        "@aetherionfw/cli": "latest",
         "typescript": "^5.5.4",
         "vitest": "^2.0.5"
       }
