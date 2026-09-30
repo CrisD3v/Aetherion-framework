@@ -1,0 +1,35 @@
+---
+title: Changelog
+description: Registro de cambios y actualizaciones del framework Aetherion.
+---
+
+Todos los cambios notables de este proyecto se documentarán en este archivo.
+
+## [1.2.0] - 2026-09-30
+
+### Añadido
+- **Core:** Se agregaron campos extendidos en `AetherionConfig` (`stage`, `projectName`, `lambdaDefaults`) dentro de `defineConfig`.
+- **Core:** Soporte para `CognitoUserPoolClient` en los decoradores de `@Infra`.
+- **Core:** Soporte para Global Secondary Indexes (GSIs) y Sort Keys en DynamoDB mediante `@DynamoTable`.
+- **Core:** Soporte mejorado del esquema IAM a través de `@IamPermissions` aceptando tanto formato nativo de AWS como mapas de objetos heredados.
+- **CLI:** Comando nativo `aetherion validate` para comprobar el entorno y prerrequisitos de construcción.
+- **CLI:** Comando nativo `aetherion status` para introspeccionar `terraform.tfstate` y listar los recursos desplegados activos (Endpoints, Cómputo, DBs).
+- **CLI:** Comando nativo `aetherion destroy` con confirmaciones de seguridad.
+- **CLI/Init:** `aetherion init` ahora autogenera los archivos `.env` y `.env.example`.
+
+### Cambiado
+- **CLI/Deploy:** Refactorización importante del flujo de despliegue. `aetherion deploy` ahora es un comando "todo en uno" que ejecuta la compilación, la síntesis y la aplicación de terraform automáticamente.
+- **CLI/Deploy:** El CLI ahora invoca a `terraform` directamente, eliminando la dependencia problemática del envoltorio de `cdktf` en Windows.
+- **CLI/Deploy:** Se añadió lógica de reintento inteligente para errores de consistencia eventual (ej. `ConflictException`) durante despliegues de API Gateway.
+- **Infra/CDKTF:** Se omite el CLI `cdktf synth`, generando módulos terraform directamente al invocar el punto de entrada de la aplicación.
+- **Infra/Builder:** El constructor de infraestructura resuelve dinámicamente la región de AWS y el ID de cuenta desde `aetherion.config.ts`.
+- **Infra/Builder:** Los despliegues del API Gateway ahora dependen estrictamente de todos los cambios de rutas/métodos asociados, forzando un redespliegue limpio cuando las rutas se actualizan.
+- **Infra/Builder:** Las variables de entorno extensibles ahora se mapean correctamente desde `AetherionConfig` a través de `ControllerMetadata` a funciones Lambda individuales.
+
+### Solucionado
+- **Infra:** Se solucionó la generación del método OPTIONS de CORS al atar el ID único a la ruta (evitando rutas duplicadas).
+- **Infra:** Se solucionó la falta de dependencias del `IntegrationResponse` hacia `MethodResponse` en API Gateway.
+- **Infra:** El "Event Source Mapping" de SQS ahora utiliza correctamente el ARN real de la cola en vez de un string estático.
+- **Infra:** Se genera un archivo `dummy.zip` local mediante `@cdktf/provider-archive` durante la síntesis para resolver los requisitos fuente del Lambda antes de compilar.
+- **Core:** Se solucionaron los registros de rutas duplicadas al agregar validaciones directas dentro del decorador `@Route`.
+- **Core:** Se añadió una validación durante el "synth-time" asegurando que todos los gateways de `@Controller` realmente apunten a un recurso `@ApiGateway` de infraestructura declarado.

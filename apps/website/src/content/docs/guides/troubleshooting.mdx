@@ -32,3 +32,27 @@ If you run into issues while building with Aetherion, check the common scenarios
 1. Always import specific modules (e.g., `import { S3Client } from '@aws-sdk/client-s3'` instead of `import * as AWS from 'aws-sdk'`).
 2. Ensure you are using `Scope.SINGLETON` for DI services to reuse instances across warm invocations.
 3. Consider enabling Provisioned Concurrency for critical endpoints in your `aetherion.config.ts`.
+
+## AWS Deployment Errors
+
+Below are common errors you might encounter when deploying your application to AWS and how to resolve them:
+
+**Error:** `ConflictException: Method already exists for this resource`
+**Cause:** CORS conflict. Multiple controllers share the exact same path, and API Gateway attempts to create the OPTIONS method multiple times. Aetherion framework handles this automatically by tying the CORS ID to the path in version `1.2.0`+.
+**Solution:** Upgrade your framework (`@aetherionfw/infra`) to the latest version.
+
+**Error:** `BadRequestException: No method response exists for method`
+**Cause:** Dependency ordering issue in API Gateway ("Eventual Consistency"). Terraform attempts to create the integration response before API Gateway has propagated the method response.
+**Solution:** This is a transient error. Run `aetherion deploy` again and the built-in automatic retry logic will handle it.
+
+**Error:** `BadRequestException: No integration defined for method` or `NotFoundException: Invalid Integration identifier specified`
+**Cause:** A deployment of routes was attempted before all integrations or lambdas were fully wired due to Terraform race conditions.
+**Solution:** Re-run `aetherion deploy`. The CLI includes retry logic to handle this AWS API behavior.
+
+**Error:** `Cannot find module '../build/Debug/conpty.node'` (Windows Users)
+**Cause:** Binary incompatibility with `node-pty` on Windows when invoking the `cdktf` CLI wrapper.
+**Solution:** Ensure you are using Aetherion v1.2.0+, which directly invokes native Terraform binaries instead of using the `cdktf` CLI, avoiding problematic native modules.
+
+**Error:** `ResourceNotFoundException: Function not found`
+**Cause:** Attempting to assign an event source mapping to a Lambda function that does not exist in AWS yet (common on the first deployment).
+**Solution:** An initial re-deployment (`aetherion deploy`) usually resolves this scenario.

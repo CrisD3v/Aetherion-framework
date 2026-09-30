@@ -17,6 +17,12 @@ import { defineConfig } from '@aetherionfw/core';
 import 'dotenv/config';
 
 export default defineConfig({
+  // Project name (used as a prefix for resources)
+  projectName: 'my-aetherion-app',
+
+  // Deployment stage (dev, staging, prod)
+  stage: process.env.AETHERION_STAGE ?? 'dev',
+
   // Your AWS Account ID
   accountId: process.env.AWS_ACCOUNT_ID!,
 
@@ -25,6 +31,15 @@ export default defineConfig({
 
   // Named AWS CLI profile (optional, used for local deployment)
   profile: process.env.AWS_PROFILE ?? 'default',
+
+  // Base configuration for all Lambdas
+  lambdaDefaults: {
+    runtime: 'nodejs20.x',
+    memorySize: 256,
+    envVars: {
+      GLOBAL_VAR: 'value' // Injected into all functions
+    }
+  }
 });
 ```
 
@@ -36,9 +51,19 @@ We recommend using environment variables (via a `.env` file) for sensitive infor
 AWS_ACCOUNT_ID=123456789012
 AWS_REGION=us-east-1
 AWS_PROFILE=default
+AETHERION_STAGE=dev
 ```
 
-Using environment variables makes it easy to override the configuration in CI/CD pipelines without modifying the code.
+When initializing a project with `aetherion init`, the framework will automatically generate the `.env` and `.env.example` files with the required variables. Using environment variables makes it easy to override the configuration in CI/CD pipelines without modifying the code.
+
+## Validating Configuration
+
+Before attempting to deploy, you can use the `validate` command to ensure all preconditions, `.env` files, and builds exist and are correct:
+
+```bash
+aetherion validate
+```
+This command will verify your account status, the existence of required binaries, and give you a quick summary if anything is missing.
 
 ## Verifying AWS Connection
 
@@ -74,7 +99,27 @@ Once your environment is configured and verified, you can deploy your applicatio
 aetherion deploy
 ```
 
-Behind the scenes, this command runs `cdktf deploy --auto-approve`. You will see the Terraform output stream directly to your console, showing the resources being created, updated, or destroyed.
+The `deploy` command is an "all-in-one" step that will automatically perform the following:
+1. Build your TypeScript project (`npm run build`).
+2. Synthesize the CDKTF infrastructure and generate Terraform modules locally.
+3. Call the native `terraform init` and `terraform apply` binaries directly, avoiding unstable middle wrappers.
+
+It also includes logic to automatically retry the deployment in case of "Eventual Consistency" issues in AWS (particularly with API Gateway). You will see the output stream directly in your console, and at the end, a summary with the created URLs and resources will be shown.
+
+### Other Useful Commands
+
+**View Status:**
+To check what infrastructure is currently deployed, view its configurations, or retrieve the API Gateway endpoint, use:
+```bash
+aetherion status
+```
+
+**Destroy Infrastructure:**
+To clean up and permanently delete all deployed AWS resources in this environment, you can use:
+```bash
+aetherion destroy
+```
+This command will ask for confirmation before permanently deleting the stack.
 
 ### CI/CD Deployment
 

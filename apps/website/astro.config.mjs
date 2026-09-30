@@ -87,6 +87,13 @@ export default defineConfig({
             { label: 'Troubleshooting', slug: 'guides/troubleshooting', translations: { es: 'Solución de problemas' } },
           ],
         },
+        {
+          label: 'Reference',
+          translations: { es: 'Referencia' },
+          items: [
+            { label: 'Changelog', slug: 'reference/changelog', translations: { es: 'Registro de Cambios' } },
+          ],
+        },
       ],
     }),
     react()

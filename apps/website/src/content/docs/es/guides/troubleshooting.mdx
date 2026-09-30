@@ -12,3 +12,27 @@ Asegúrate de que el método HTTP y la ruta coincidan exactamente con lo definid
 
 **Error: Falló la síntesis de CDKTF**
 Ejecuta `tsc --noEmit` localmente para asegurarte de que no hay errores de sintaxis en TypeScript antes de desplegar.
+
+## Errores de Despliegue en AWS
+
+A continuación, se detallan errores comunes que puedes encontrar al desplegar tu aplicación en AWS y cómo resolverlos:
+
+**Error:** `ConflictException: Method already exists for this resource`
+**Causa:** Conflicto CORS. Varios controladores comparten la misma ruta exacta y el API Gateway intenta crear el método OPTIONS múltiples veces. El framework Aetherion maneja esto automáticamente atando el ID de CORS a la ruta en la versión `1.2.0`+.
+**Solución:** Actualiza el framework (`@aetherionfw/infra`) a la versión más reciente.
+
+**Error:** `BadRequestException: No method response exists for method`
+**Causa:** Problema de orden de dependencias en API Gateway ("Eventual Consistency"). Terraform intenta crear la respuesta de integración antes de que el API Gateway haya propagado la respuesta del método.
+**Solución:** Este es un error transitorio. Vuelve a ejecutar `aetherion deploy` y el retry automático se encargará de resolverlo.
+
+**Error:** `BadRequestException: No integration defined for method` o `NotFoundException: Invalid Integration identifier specified`
+**Causa:** Se intentó realizar el despliegue de las rutas (Deployment) antes de que todas las integraciones o lambdas estuviesen cableadas. Ocurre por race conditions en Terraform.
+**Solución:** Vuelve a ejecutar `aetherion deploy`. El CLI incluye lógica de reintentos para manejar este comportamiento de la API de AWS.
+
+**Error:** `Cannot find module '../build/Debug/conpty.node'` (Usuarios de Windows)
+**Causa:** Incompatibilidad de binarios de `node-pty` en Windows al invocar el wrapper del CLI de `cdktf`.
+**Solución:** Asegúrate de estar usando Aetherion v1.2.0+, el cual invoca los binarios nativos de Terraform directamente en lugar de usar el CLI de `cdktf`, evitando módulos nativos problemáticos.
+
+**Error:** `ResourceNotFoundException: Function not found`
+**Causa:** Se está intentando asignar un evento a una función Lambda que aún no existe en AWS (común en el primer despliegue).
+**Solución:** Un redespliegue inicial (`aetherion deploy`) suele solucionar este escenario.
