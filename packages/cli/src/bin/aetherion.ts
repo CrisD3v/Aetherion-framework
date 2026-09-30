@@ -7,13 +7,16 @@ import { synthCommand } from '../commands/synth';
 import { deployCommand } from '../commands/deploy';
 import { docsCommand } from '../commands/docs';
 import { checkEnvCommand } from '../commands/check-env';
+import { validateCommand } from '../commands/validate';
+import { destroyCommand } from '../commands/destroy';
+import { statusCommand } from '../commands/status';
 
 const program = new Command();
 
 program
   .name('aetherion')
   .description(chalk.blue('Aetherion Serverless Framework CLI'))
-  .version('1.0.0');
+  .version('1.2.0');
 
 program
   .command('init <project-name>')
@@ -28,7 +31,25 @@ program
 program
   .command('deploy')
   .description('Deploy the infrastructure to AWS')
+  .option('--skip-build', 'Skip building the project before deployment')
+  .option('--plan-only', 'Only show the terraform plan without applying')
   .action(deployCommand);
+
+program
+  .command('validate')
+  .description('Validate the project configuration and prerequisites')
+  .action(validateCommand);
+
+program
+  .command('destroy')
+  .description('Destroy the deployed infrastructure')
+  .option('--force', 'Bypass the confirmation prompt')
+  .action(destroyCommand);
+
+program
+  .command('status')
+  .description('Show the status of the deployed infrastructure')
+  .action(statusCommand);
 
 program
   .command('docs')

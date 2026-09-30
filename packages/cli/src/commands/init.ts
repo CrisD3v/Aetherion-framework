@@ -37,24 +37,38 @@ export async function initCommand(projectName: string) {
         "test": "vitest run"
       },
       dependencies: {
-        "@aetherionfw/core": "latest",
-        "@aetherionfw/infra": "latest",
-        "@aetherionfw/docs": "latest"
+        "@aetherionfw/core": "^1.2.0",
+        "@aetherionfw/infra": "^1.2.0",
+        "@aetherionfw/docs": "^1.2.0"
       },
       devDependencies: {
-        "@aetherionfw/cli": "latest",
+        "@aetherionfw/cli": "^1.2.0",
         "typescript": "^5.5.4",
         "vitest": "^2.0.5"
       }
     };
     await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 });
 
+    // 3. DX-001: Generate .env.example and .env
+    const envContent = `# AWS Deployment configuration
+AWS_REGION=us-east-1
+AWS_ACCOUNT_ID=
+AWS_PROFILE=default
+
+# Framework configuration
+AETHERION_STAGE=dev
+
+# Custom Application Variables
+# DB_TABLE_PREFIX=myapp_
+`;
+    await fs.writeFile(path.join(projectPath, '.env.example'), envContent);
+    await fs.writeFile(path.join(projectPath, '.env'), envContent);
+
     spinner.succeed(`Project ${chalk.green(projectName)} created successfully.`);
     console.log(chalk.blue(`\nNext steps:`));
     console.log(`  $ cd ${projectName}`);
     console.log(`  $ pnpm install`);
-    console.log(`  $ pnpm test`);
-    console.log(`  $ aetherion synth`);
+    console.log(`  $ aetherion deploy`);
   } catch (err: any) {
     spinner.fail(`Failed to create project: ${err.message}`);
   }
