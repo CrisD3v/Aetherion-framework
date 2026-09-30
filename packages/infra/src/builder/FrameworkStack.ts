@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { TerraformStack } from 'cdktf';
+import { TerraformStack, Fn, TerraformAsset, AssetType } from 'cdktf';
 import { AwsProvider } from '@cdktf/provider-aws/lib/provider';
 import { S3Bucket } from '@cdktf/provider-aws/lib/s3-bucket';
 import { DynamodbTable } from '@cdktf/provider-aws/lib/dynamodb-table';
@@ -8,6 +8,7 @@ import { KmsKey } from '@cdktf/provider-aws/lib/kms-key';
 import { SsmParameter } from '@cdktf/provider-aws/lib/ssm-parameter';
 import { CloudfrontDistribution } from '@cdktf/provider-aws/lib/cloudfront-distribution';
 import { CognitoUserPool } from '@cdktf/provider-aws/lib/cognito-user-pool';
+import { CognitoUserPoolClient } from '@cdktf/provider-aws/lib/cognito-user-pool-client';
 import { Vpc } from '@cdktf/provider-aws/lib/vpc';
 import { IamRole } from '@cdktf/provider-aws/lib/iam-role';
 import { IamRolePolicy } from '@cdktf/provider-aws/lib/iam-role-policy';
@@ -28,28 +29,26 @@ import { Apigatewayv2Api } from '@cdktf/provider-aws/lib/apigatewayv2-api';
 import { Apigatewayv2Integration } from '@cdktf/provider-aws/lib/apigatewayv2-integration';
 import { Apigatewayv2Route } from '@cdktf/provider-aws/lib/apigatewayv2-route';
 import { Apigatewayv2Stage } from '@cdktf/provider-aws/lib/apigatewayv2-stage';
+import { ArchiveProvider } from '@cdktf/provider-archive/lib/provider';
+import { DataArchiveFile } from '@cdktf/provider-archive/lib/data-archive-file';
 import { MetadataRegistry, ApiGatewayMetadata, AetherionConfig } from '@aetherionfw/core';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 
 interface ApiGatewayRef {
   metadata: ApiGatewayMetadata;
   restApi?: ApiGatewayRestApi;
   httpApi?: Apigatewayv2Api;
   rootResourceId: string;
-  /** REST API: tracks created resources by path segment for hierarchical reuse */
   resourceMap: Map<string, ApiGatewayResource>;
-  /** REST API: tracks created authorizers by name for reuse */
   authorizerMap: Map<string, ApiGatewayAuthorizer>;
-  /** Collect all method IDs to build deployment dependency */
   methodIds: string[];
+  // BUG-004, INFRA-002: Track dependencies for deployment
+  deployDependencies: any[];
 }
 
 export class FrameworkStack extends TerraformStack {
-  /**
-   * Resolves and loads `aetherion.config.ts` from the current working directory.
-   * Falls back to safe defaults if no config file is found.
-   */
   private static loadConfig(): AetherionConfig {
     const configPath = path.resolve(process.cwd(), 'aetherion.config.ts');
     const configJsPath = path.resolve(process.cwd(), 'aetherion.config.js');
@@ -71,25 +70,25 @@ export class FrameworkStack extends TerraformStack {
     }
 
     try {
-      // Use require for .js, ts-node/register path for .ts
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mod = require(resolvedPath);
       const config: AetherionConfig = mod.default ?? mod;
       return {
+        ...config,
         accountId: process.env.AWS_ACCOUNT_ID ?? config.accountId,
-        region: process.env.AWS_REGION ?? config.region,
+        region: process.env.AWS_REGION ?? config.region ?? 'us-east-1',
         profile: process.env.AWS_PROFILE ?? config.profile,
       };
     } catch (err) {
       console.error(`[Aetherion] Failed to load aetherion.config.ts: ${(err as Error).message}`);
       process.exit(1);
-      throw new Error('unreachable'); // satisfy TypeScript return type
+      throw new Error('unreachable');
     }
   }
-  /** All created Lambda functions indexed by their function name */
+
   private lambdaFunctions: Map<string, LambdaFunction> = new Map();
-  /** All created Cognito User Pools indexed by their props.name */
   private cognitoPools: Map<string, CognitoUserPool> = new Map();
+  private sqsQueues: Map<string, SqsQueue> = new Map(); // Track SQS Queues for BUG-005
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
@@ -102,8 +101,25 @@ export class FrameworkStack extends TerraformStack {
       ...(config.accountId ? { allowedAccountIds: [config.accountId] } : {}),
     });
 
+    // Archive provider for dummy.zip (BUG-007)
+    new ArchiveProvider(this, 'Archive');
+
+    // Generate dummy.zip using cdktf archive provider
+    const dummyZip = new DataArchiveFile(this, 'dummy_zip', {
+      type: 'zip',
+      sourceContent: 'exports.handler = async (event) => ({ statusCode: 200, body: "Dummy" });',
+      sourceContentFilename: 'index.js',
+      outputPath: `${path.resolve(process.cwd(), 'cdktf.out/dummy.zip')}`,
+    });
+
     const registry = MetadataRegistry.getInstance();
     
+    // CORE-003: Validate apiGateway references
+    const warnings = registry.validateApiGatewayReferences();
+    for (const w of warnings) {
+      console.warn(`[WARN] ${w}`);
+    }
+
     // ────────────────────────────────────────────
     // 1. Build Infra Resources
     // ────────────────────────────────────────────
@@ -118,28 +134,56 @@ export class FrameworkStack extends TerraformStack {
         
         switch (res.type) {
           case 'S3Bucket':
-            new S3Bucket(this, res.name, {
-              bucket: res.props.name,
-            });
+            new S3Bucket(this, res.name, { bucket: res.props.name });
             break;
-          case 'DynamoTable':
+          case 'DynamoTable': {
+            // INFRA-003: Support Sort Key and GSIs
+            const props = res.props;
+            
+            const attributeMap = new Map<string, string>();
+            attributeMap.set(props.partitionKey.name, props.partitionKey.type === 'STRING' ? 'S' : props.partitionKey.type === 'NUMBER' ? 'N' : 'B');
+            
+            if (props.sortKey) {
+              attributeMap.set(props.sortKey.name, props.sortKey.type === 'STRING' ? 'S' : props.sortKey.type === 'NUMBER' ? 'N' : 'B');
+            }
+            
+            if (props.gsi) {
+              for (const gsi of props.gsi) {
+                attributeMap.set(gsi.hashKey, gsi.hashKeyType === 'NUMBER' ? 'N' : gsi.hashKeyType === 'BINARY' ? 'B' : 'S');
+                if (gsi.rangeKey) {
+                  attributeMap.set(gsi.rangeKey, gsi.rangeKeyType === 'NUMBER' ? 'N' : gsi.rangeKeyType === 'BINARY' ? 'B' : 'S');
+                }
+              }
+            }
+
+            const attributes = Array.from(attributeMap.entries()).map(([name, type]) => ({ name, type }));
+
             new DynamodbTable(this, res.name, {
-              name: res.props.name,
-              hashKey: res.props.partitionKey.name,
-              attribute: [{ name: res.props.partitionKey.name, type: res.props.partitionKey.type === 'STRING' ? 'S' : 'N' }],
+              name: props.name,
+              hashKey: props.partitionKey.name,
+              rangeKey: props.sortKey?.name,
+              attribute: attributes,
               billingMode: 'PAY_PER_REQUEST',
+              globalSecondaryIndex: props.gsi?.map((gsi: any) => ({
+                name: gsi.name,
+                hashKey: gsi.hashKey,
+                rangeKey: gsi.rangeKey,
+                projectionType: gsi.projectionType || 'ALL',
+                nonKeyAttributes: gsi.nonKeyAttributes,
+              })),
             });
             break;
-          case 'SqsQueue':
-            new SqsQueue(this, res.name, {
+          }
+          case 'SqsQueue': {
+            const queue = new SqsQueue(this, res.name, {
               name: res.props.name,
               visibilityTimeoutSeconds: res.props.visibilityTimeout,
             });
+            this.sqsQueues.set(res.props.name, queue); // Track for event source mapping
             break;
+          }
           case 'KmsKey':
-            new KmsKey(this, res.name, {
-              description: res.props.description,
-            });
+            new KmsKey(this, res.name, { description: res.props.description });
             break;
           case 'SsmParameter':
             new SsmParameter(this, res.name, {
@@ -151,27 +195,34 @@ export class FrameworkStack extends TerraformStack {
           case 'CloudFrontDistribution':
             new CloudfrontDistribution(this, res.name, {
               enabled: true,
-              origin: [{
-                domainName: res.props.originDomain,
-                originId: `${res.name}-origin`,
-              }],
+              origin: [{ domainName: res.props.originDomain, originId: `${res.name}-origin` }],
               defaultCacheBehavior: {
                 targetOriginId: `${res.name}-origin`,
                 viewerProtocolPolicy: 'redirect-to-https',
                 allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
                 cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
               },
-              viewerCertificate: {
-                cloudfrontDefaultCertificate: true,
-              },
+              viewerCertificate: { cloudfrontDefaultCertificate: true },
               restrictions: { geoRestriction: { restrictionType: 'none' } },
             });
             break;
           case 'CognitoUserPool': {
-            const pool = new CognitoUserPool(this, res.name, {
-              name: res.props.name,
-            });
+            const pool = new CognitoUserPool(this, res.name, { name: res.props.name });
             this.cognitoPools.set(res.props.name, pool);
+            break;
+          }
+          case 'CognitoUserPoolClient': {
+            // INFRA-004: CognitoUserPoolClient support
+            const userPoolId = res.props.userPoolId || this.cognitoPools.values().next().value?.id;
+            if (!userPoolId) {
+              console.warn(`[WARN] CognitoUserPoolClient ${res.name} has no userPoolId and no UserPool exists.`);
+              break;
+            }
+            new CognitoUserPoolClient(this, res.name, {
+              name: res.props.name,
+              userPoolId: userPoolId,
+              generateSecret: res.props.generateSecret,
+            });
             break;
           }
           case 'Vpc':
@@ -197,7 +248,6 @@ export class FrameworkStack extends TerraformStack {
             });
             break;
           case 'ApiGateway':
-            // Collect for later processing (after Lambdas are created)
             apiGatewayConfigs.set(res.props.name, { infraResource: res, props: res.props });
             break;
           default:
@@ -207,7 +257,7 @@ export class FrameworkStack extends TerraformStack {
     }
     
     // ────────────────────────────────────────────
-    // 2. Build Lambdas and IAM Policies (1:1 Lambda per Handle Architecture)
+    // 2. Build Lambdas and IAM Policies (1:1 Lambda per Handle)
     // ────────────────────────────────────────────
     const controllers = registry.getControllers();
     for (const [target, controllerMeta] of controllers) {
@@ -216,9 +266,7 @@ export class FrameworkStack extends TerraformStack {
       const iamPermissions = registry.getIamPermissions(target);
       const sqsTriggers = registry.getSqsTriggers(target);
 
-      if (handles.length === 0) {
-        continue;
-      }
+      if (handles.length === 0) continue;
 
       for (const handle of handles) {
         const methodName = handle.methodName;
@@ -238,7 +286,7 @@ export class FrameworkStack extends TerraformStack {
           }),
         });
 
-        // 2b. Attach IAM Policies (Method overrides Class)
+        // 2b. Attach IAM Policies
         let handlePerms = iamPermissions.find(p => p.methodName === methodName);
         if (!handlePerms) {
           handlePerms = iamPermissions.find(p => !p.methodName);
@@ -246,14 +294,22 @@ export class FrameworkStack extends TerraformStack {
 
         if (handlePerms) {
           const statements = [];
-          for (const service of Object.keys(handlePerms.permissions)) {
-            const rules = handlePerms.permissions[service];
-            for (const rule of rules) {
-              statements.push({
-                Effect: "Allow",
-                Action: rule.action,
-                Resource: rule.resource,
-              });
+          
+          // BUG-006: Normalize IAM permission format
+          if (Array.isArray(handlePerms.permissions)) {
+            // AWS native format (preferred)
+            statements.push(...handlePerms.permissions);
+          } else {
+            // Service-grouped legacy format
+            for (const service of Object.keys(handlePerms.permissions)) {
+              const rules = handlePerms.permissions[service];
+              for (const rule of rules) {
+                statements.push({
+                  Effect: "Allow",
+                  Action: rule.action,
+                  Resource: rule.resource,
+                });
+              }
             }
           }
 
@@ -269,32 +325,46 @@ export class FrameworkStack extends TerraformStack {
           }
         }
 
+        // INFRA-006: Extensible lambda environment variables
+        const projectEnvVars = config.lambdaDefaults?.envVars || {};
+        const controllerEnvVars = controllerMeta.envVars || {};
+        
+        // Load process.env to grab actual values if keys match or let user pass them in config
+        const envVariables: Record<string, string> = {
+            ...projectEnvVars,
+            ...controllerEnvVars,
+            AETHERION_TARGET_CLASS: controllerMeta.lambdaName,
+            AETHERION_TARGET_METHOD: methodName,
+        };
+
         // 2c. Create the Lambda Function
         const lambdaFunction = new LambdaFunction(this, lambdaName, {
           functionName: lambdaName,
-          runtime: controllerMeta.runtime || 'nodejs20.x',
-          memorySize: handle.memorySize || controllerMeta.memorySize || 128,
-          timeout: handle.timeout || controllerMeta.timeout || 3,
+          runtime: controllerMeta.runtime || config.lambdaDefaults?.runtime || 'nodejs20.x',
+          memorySize: handle.memorySize || controllerMeta.memorySize || config.lambdaDefaults?.memorySize || 128,
+          timeout: handle.timeout || controllerMeta.timeout || config.lambdaDefaults?.timeout || 3,
           role: role.arn,
-          filename: 'dummy.zip',
+          filename: dummyZip.outputPath, // BUG-007: Use generated dummy zip
           handler: 'index.handler',
           environment: {
-            variables: {
-              AETHERION_TARGET_CLASS: controllerMeta.lambdaName,
-              AETHERION_TARGET_METHOD: methodName,
-            }
+            variables: envVariables
           }
         });
 
         this.lambdaFunctions.set(lambdaName, lambdaFunction);
 
-        // 2d. Check for SQS Triggers targeting this handle
+        // 2d. SQS Triggers
         const handleTriggers = sqsTriggers.filter(t => t.methodName === methodName);
         for (const trigger of handleTriggers) {
           console.log(`Linking SQS Trigger ${trigger.queueName} to ${lambdaName}`);
+          
+          // BUG-005: Use real queue ARN instead of hardcoded
+          const sqsQueue = this.sqsQueues.get(trigger.queueName);
+          const queueArn = sqsQueue ? sqsQueue.arn : `arn:aws:sqs:${config.region}:${config.accountId}:${trigger.queueName}`;
+
           new LambdaEventSourceMapping(this, `${lambdaName}-${trigger.queueName}-mapping`, {
             functionName: lambdaFunction.arn,
-            eventSourceArn: `arn:aws:sqs:us-east-1:123456789012:${trigger.queueName}`,
+            eventSourceArn: queueArn,
           });
         }
       }
@@ -305,9 +375,8 @@ export class FrameworkStack extends TerraformStack {
     // ────────────────────────────────────────────
     const apiRefs: Map<string, ApiGatewayRef> = new Map();
 
-    // 3a. Create or import each API Gateway
-    for (const [apiName, config] of apiGatewayConfigs) {
-      const props = config.props as ApiGatewayMetadata;
+    for (const [apiName, apiConfig] of apiGatewayConfigs) {
+      const props = apiConfig.props as ApiGatewayMetadata;
       console.log(`Building API Gateway: ${apiName} (${props.type})`);
 
       if (props.type === 'REST') {
@@ -317,21 +386,16 @@ export class FrameworkStack extends TerraformStack {
       }
     }
 
-    // 3b. Wire controllers to their API Gateways
     for (const [target, controllerMeta] of controllers) {
       if (!controllerMeta.apiGateway) continue;
 
       const apiRef = apiRefs.get(controllerMeta.apiGateway);
-      if (!apiRef) {
-        console.warn(`API Gateway "${controllerMeta.apiGateway}" not found for controller "${controllerMeta.lambdaName}"`);
-        continue;
-      }
+      if (!apiRef) continue;
 
       const routes = registry.getRoutes(target);
       const handles = registry.getHandles(target);
 
       for (const route of routes) {
-        // Find the matching handle for this route to get the lambda name
         const handle = handles.find(h => h.methodName === route.methodName);
         if (!handle) continue;
 
@@ -351,11 +415,20 @@ export class FrameworkStack extends TerraformStack {
 
     // 3c. Create Deployments and Stages
     for (const [apiName, apiRef] of apiRefs) {
-      const stageName = apiRef.metadata.stageName || 'dev';
+      const stageName = apiRef.metadata.stageName || config.stage || 'dev';
 
       if (apiRef.metadata.type === 'REST' && apiRef.restApi && !apiRef.metadata.existingApiId) {
+        
+        // BUG-004, INFRA-002: deployment dependsOn all API Gateway resources
+        // INFRA-007: redeployment triggers on route change
+        const redeploymentHash = crypto.createHash('sha256').update(JSON.stringify(apiRef.methodIds)).digest('hex');
+
         const deployment = new ApiGatewayDeployment(this, `${apiName}-deployment`, {
           restApiId: apiRef.restApi.id,
+          dependsOn: apiRef.deployDependencies,
+          triggers: {
+            redeployment: redeploymentHash,
+          },
           lifecycle: {
             createBeforeDestroy: true,
           },
@@ -374,7 +447,6 @@ export class FrameworkStack extends TerraformStack {
           name: stageName,
           autoDeploy: true,
         });
-
         console.log(`Created HTTP API stage: ${apiName} → "${stageName}"`);
       }
     }
@@ -386,17 +458,15 @@ export class FrameworkStack extends TerraformStack {
 
   private buildRestApiGateway(apiName: string, props: ApiGatewayMetadata, apiRefs: Map<string, ApiGatewayRef>) {
     if (props.existingApiId) {
-      // Import existing REST API
-      console.log(`Importing existing REST API: ${props.existingApiId}`);
       apiRefs.set(apiName, {
         metadata: props,
         rootResourceId: props.existingRootResourceId || '',
         resourceMap: new Map(),
         authorizerMap: new Map(),
         methodIds: [],
+        deployDependencies: [],
       });
     } else {
-      // Create new REST API
       const restApi = new ApiGatewayRestApi(this, apiName, {
         name: props.name,
         description: props.description || `API Gateway for ${props.name}`,
@@ -409,6 +479,7 @@ export class FrameworkStack extends TerraformStack {
         resourceMap: new Map(),
         authorizerMap: new Map(),
         methodIds: [],
+        deployDependencies: [],
       });
     }
   }
@@ -419,13 +490,13 @@ export class FrameworkStack extends TerraformStack {
 
   private buildHttpApiGateway(apiName: string, props: ApiGatewayMetadata, apiRefs: Map<string, ApiGatewayRef>) {
     if (props.existingApiId) {
-      console.log(`Importing existing HTTP API: ${props.existingApiId}`);
       apiRefs.set(apiName, {
         metadata: props,
         rootResourceId: '',
         resourceMap: new Map(),
         authorizerMap: new Map(),
         methodIds: [],
+        deployDependencies: [],
       });
     } else {
       const corsConfig = props.corsEnabled !== false ? {
@@ -448,6 +519,7 @@ export class FrameworkStack extends TerraformStack {
         resourceMap: new Map(),
         authorizerMap: new Map(),
         methodIds: [],
+        deployDependencies: [],
       });
     }
   }
@@ -465,10 +537,8 @@ export class FrameworkStack extends TerraformStack {
     const restApi = apiRef.restApi;
     const restApiId = restApi ? restApi.id : apiRef.metadata.existingApiId!;
 
-    // Build hierarchical resources for the path
     const resourceId = this.getOrCreateRestResource(apiRef, route.path, restApiId);
 
-    // Determine authorization type
     let authorizationType = 'NONE';
     let authorizerId: string | undefined;
 
@@ -482,7 +552,6 @@ export class FrameworkStack extends TerraformStack {
 
     const methodId = `${lambdaName}-${route.method}`;
 
-    // Create Method
     const method = new ApiGatewayMethod(this, methodId, {
       restApiId,
       resourceId,
@@ -493,8 +562,7 @@ export class FrameworkStack extends TerraformStack {
 
     apiRef.methodIds.push(methodId);
 
-    // Create Integration (AWS_PROXY)
-    new ApiGatewayIntegration(this, `${methodId}-integration`, {
+    const integration = new ApiGatewayIntegration(this, `${methodId}-integration`, {
       restApiId,
       resourceId,
       httpMethod: method.httpMethod,
@@ -503,7 +571,8 @@ export class FrameworkStack extends TerraformStack {
       uri: lambdaFn.invokeArn,
     });
 
-    // Grant API Gateway permission to invoke Lambda
+    apiRef.deployDependencies.push(method, integration);
+
     new LambdaPermission(this, `${methodId}-permission`, {
       statementId: `AllowAPIGateway-${methodId}`,
       action: 'lambda:InvokeFunction',
@@ -511,9 +580,8 @@ export class FrameworkStack extends TerraformStack {
       principal: 'apigateway.amazonaws.com',
     });
 
-    // CORS: Create OPTIONS method if CORS is enabled
     if (apiRef.metadata.corsEnabled !== false) {
-      this.createCorsOptionsMethod(apiRef, route.path, restApiId, resourceId, lambdaName);
+      this.createCorsOptionsMethod(apiRef, route.path, restApiId, resourceId);
     }
   }
 
@@ -532,7 +600,6 @@ export class FrameworkStack extends TerraformStack {
 
     const integrationId = `${lambdaName}-${route.method}-int`;
 
-    // Create Integration
     const integration = new Apigatewayv2Integration(this, integrationId, {
       apiId,
       integrationType: 'AWS_PROXY',
@@ -540,7 +607,6 @@ export class FrameworkStack extends TerraformStack {
       payloadFormatVersion: '2.0',
     });
 
-    // Create Route
     const routeKey = `${route.method.toUpperCase()} ${route.path}`;
     new Apigatewayv2Route(this, `${lambdaName}-${route.method}-route`, {
       apiId,
@@ -548,7 +614,6 @@ export class FrameworkStack extends TerraformStack {
       target: `integrations/${integration.id}`,
     });
 
-    // Grant API Gateway permission to invoke Lambda
     new LambdaPermission(this, `${lambdaName}-${route.method}-permission`, {
       statementId: `AllowHTTPAPI-${lambdaName}-${route.method}`,
       action: 'lambda:InvokeFunction',
@@ -561,10 +626,6 @@ export class FrameworkStack extends TerraformStack {
   // Hierarchical Resource Builder (REST API)
   // ────────────────────────────────────────────
 
-  /**
-   * Parses a path like `/users/{id}/orders` and creates intermediate
-   * API Gateway resources, reusing already-created segments.
-   */
   private getOrCreateRestResource(
     apiRef: ApiGatewayRef,
     path: string,
@@ -591,6 +652,7 @@ export class FrameworkStack extends TerraformStack {
       });
 
       apiRef.resourceMap.set(currentPath, resource);
+      apiRef.deployDependencies.push(resource);
       currentParentId = resource.id;
     }
 
@@ -606,12 +668,10 @@ export class FrameworkStack extends TerraformStack {
     authorizerName: string,
     restApiId: string,
   ): ApiGatewayAuthorizer | undefined {
-    // Reuse existing authorizer if already created for this API
     if (apiRef.authorizerMap.has(authorizerName)) {
       return apiRef.authorizerMap.get(authorizerName)!;
     }
 
-    // Look up the Cognito User Pool by name
     const pool = this.cognitoPools.get(authorizerName);
     if (!pool) {
       console.warn(`Authorizer "${authorizerName}" references a Cognito User Pool that was not found in @Infra resources.`);
@@ -626,6 +686,7 @@ export class FrameworkStack extends TerraformStack {
     });
 
     apiRef.authorizerMap.set(authorizerName, authorizer);
+    apiRef.deployDependencies.push(authorizer);
     return authorizer;
   }
 
@@ -638,11 +699,10 @@ export class FrameworkStack extends TerraformStack {
     path: string,
     restApiId: string,
     resourceId: string,
-    lambdaName: string,
   ) {
-    const corsId = `${lambdaName}-OPTIONS-${path.replace(/[/{}]/g, '-')}`;
+    // BUG-002: Base CORS ID on path, not lambda to prevent duplicates
+    const corsId = `CORS-OPTIONS-${path.replace(/[/{}]/g, '-')}`;
 
-    // Avoid duplicate OPTIONS methods on the same resource
     if (apiRef.methodIds.includes(corsId)) return;
     apiRef.methodIds.push(corsId);
 
@@ -657,7 +717,7 @@ export class FrameworkStack extends TerraformStack {
       authorization: 'NONE',
     });
 
-    new ApiGatewayIntegration(this, `${corsId}-integration`, {
+    const corsIntegration = new ApiGatewayIntegration(this, `${corsId}-integration`, {
       restApiId,
       resourceId,
       httpMethod: optionsMethod.httpMethod,
@@ -667,7 +727,7 @@ export class FrameworkStack extends TerraformStack {
       },
     });
 
-    new ApiGatewayMethodResponse(this, `${corsId}-response`, {
+    const methodResponse = new ApiGatewayMethodResponse(this, `${corsId}-response`, {
       restApiId,
       resourceId,
       httpMethod: optionsMethod.httpMethod,
@@ -679,7 +739,9 @@ export class FrameworkStack extends TerraformStack {
       },
     });
 
-    new ApiGatewayIntegrationResponse(this, `${corsId}-int-response`, {
+    // BUG-003: IntegrationResponse must depend on MethodResponse
+    const intResponse = new ApiGatewayIntegrationResponse(this, `${corsId}-int-response`, {
+      dependsOn: [methodResponse],
       restApiId,
       resourceId,
       httpMethod: optionsMethod.httpMethod,
@@ -690,6 +752,7 @@ export class FrameworkStack extends TerraformStack {
         'method.response.header.Access-Control-Allow-Origin': `'${origins}'`,
       },
     });
+
+    apiRef.deployDependencies.push(optionsMethod, corsIntegration, methodResponse, intResponse);
   }
 }
-
