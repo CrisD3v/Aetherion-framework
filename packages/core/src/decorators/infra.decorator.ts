@@ -1,4 +1,4 @@
-import { MetadataRegistry, InfraMetadata, ApiGatewayMetadata } from '../registry/MetadataRegistry';
+import { MetadataRegistry, InfraMetadata, ApiGatewayMetadata, DynamoKeyAttribute, DynamoGsiConfig } from '../registry/MetadataRegistry';
 
 export function Infra(): ClassDecorator {
   return (target: any) => {
@@ -17,7 +17,7 @@ export function S3Bucket(props: { name: string; versioned?: boolean; private?: b
   };
 }
 
-export function DynamoTable(props: { name: string; partitionKey: any }): PropertyDecorator {
+export function DynamoTable(props: { name: string; partitionKey: DynamoKeyAttribute; sortKey?: DynamoKeyAttribute; gsi?: DynamoGsiConfig[] }): PropertyDecorator {
   return (target: any, propertyKey: string | symbol) => {
     MetadataRegistry.getInstance().registerInfraResource(target.constructor, {
       type: 'DynamoTable',
@@ -81,6 +81,16 @@ export function CognitoUserPool(props: { name: string }): PropertyDecorator {
   return (target: any, propertyKey: string | symbol) => {
     MetadataRegistry.getInstance().registerInfraResource(target.constructor, {
       type: 'CognitoUserPool',
+      name: String(propertyKey),
+      props
+    });
+  };
+}
+
+export function CognitoUserPoolClient(props: { name: string; userPoolId?: string; generateSecret?: boolean }): PropertyDecorator {
+  return (target: any, propertyKey: string | symbol) => {
+    MetadataRegistry.getInstance().registerInfraResource(target.constructor, {
+      type: 'CognitoUserPoolClient',
       name: String(propertyKey),
       props
     });
