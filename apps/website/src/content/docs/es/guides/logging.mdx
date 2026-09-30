@@ -3,8 +3,11 @@ title: Logs y Trazabilidad
 description: Logs JSON estructurados nativos para CloudWatch.
 ---
 
+Aetherion provee un logger JSON estructurado (`@aetherionfw/logger`) ideal para ser consultado en CloudWatch Logs Insights. 
 
-Aetherion provee un logger JSON estructurado (`@aetherionfw/logger`) ideal para ser consultado en CloudWatch Logs Insights. Este logger adjunta automáticamente el ID de la petición de API Gateway en cada log, permitiendo agrupar mensajes por ejecución.
+## El Decorador `@Logger()`
+
+Puedes inyectar el logger del framework directamente en tus controladores o servicios. El logger adjunta automáticamente el contexto de ejecución, incluyendo variables nativas de AWS Lambda como el ID de trazabilidad (`_X_AMZN_TRACE_ID`) y el nombre de la función (`AWS_LAMBDA_FUNCTION_NAME`).
 
 ```typescript
 import { Controller, Get } from '@aetherionfw/core';
@@ -19,4 +22,42 @@ export class UserController {
     this.logger.info('Obteniendo usuarios de la base de datos');
   }
 }
+```
+
+## Niveles de Log y Contexto
+
+El logger expone los cuatro niveles estándar. Cada nivel acepta un mensaje y, de manera opcional, un objeto de contexto para añadir datos estructurados a tu log.
+
+```typescript
+// Información estándar
+this.logger.info('Usuario creado', { userId: '123', role: 'admin' });
+
+// Advertencias
+this.logger.warn('Límite de cuota próximo a superarse', { currentUsage: 95 });
+
+// Errores
+try {
+  // ...
+} catch (error) {
+  this.logger.error('Fallo al procesar pago', { error: error.message, transactionId: 'abc' });
+}
+
+// Depuración (Debug)
+this.logger.debug('Payload recibido', { payload });
+```
+
+### Comportamiento del nivel Debug
+Los mensajes enviados mediante `this.logger.debug()` solo se imprimirán en consola si la variable de entorno `DEBUG` está definida, o si el entorno de despliegue (`AETHERION_STAGE`) no es `prod`. En producción, estos logs se silencian para reducir costos y ruido en CloudWatch.
+
+## Consultas en CloudWatch Logs Insights
+
+Dado que el formato de salida es JSON plano de una sola línea, puedes utilizar **CloudWatch Logs Insights** en AWS para filtrar y estructurar búsquedas complejas fácilmente.
+
+Un ejemplo para buscar todos los errores agrupados por la función que los causó:
+
+```text
+fields @timestamp, level, message, awsRequestId, error
+| filter level = "ERROR"
+| sort @timestamp desc
+| limit 20
 ```

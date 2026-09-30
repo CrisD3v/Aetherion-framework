@@ -3,12 +3,11 @@ title: Logging & Tracing
 description: Structured JSON logging for CloudWatch.
 ---
 
-
 Standard `console.log` statements in AWS Lambda can be difficult to parse and search in CloudWatch. Aetherion provides a structured JSON logger via the `@aetherionfw/logger` package.
 
 ## The `@Logger()` Decorator
 
-You can inject the framework logger directly into your services and controllers. The logger automatically attaches context (like Request ID and X-Ray Trace IDs) to every log entry.
+You can inject the framework logger directly into your services and controllers. The logger automatically attaches contextual execution data, including native AWS Lambda variables such as the trace ID (`_X_AMZN_TRACE_ID`) and the function name (`AWS_LAMBDA_FUNCTION_NAME`).
 
 ```typescript
 import { Controller, Get } from '@aetherionfw/core';
@@ -21,23 +20,44 @@ export class UserController {
   @Get('/')
   async getUsers() {
     this.logger.info('Fetching all users from the database');
-    
-    try {
-      // ... logic
-    } catch (error) {
-      this.logger.error('Failed to fetch users', { error });
-    }
   }
 }
 ```
 
-## CloudWatch Integration
+## Log Levels and Context
 
-When deployed to AWS, the logger automatically formats output as single-line JSON, allowing you to use CloudWatch Logs Insights to run complex queries:
+The logger exposes the four standard log levels. Each level accepts a message and an optional context object to append structured data to your log.
+
+```typescript
+// Standard information
+this.logger.info('User created', { userId: '123', role: 'admin' });
+
+// Warnings
+this.logger.warn('Quota limit approaching', { currentUsage: 95 });
+
+// Errors
+try {
+  // ...
+} catch (error) {
+  this.logger.error('Failed to process payment', { error: error.message, transactionId: 'abc' });
+}
+
+// Debugging
+this.logger.debug('Payload received', { payload });
+```
+
+### Debug Level Behavior
+Messages logged using `this.logger.debug()` will only be printed to the console if the `DEBUG` environment variable is defined, or if the deployment environment (`AETHERION_STAGE`) is not `prod`. In production, these logs are automatically silenced to reduce costs and noise in CloudWatch.
+
+## CloudWatch Logs Insights Queries
+
+Since the output format is single-line flat JSON, you can easily use **CloudWatch Logs Insights** in AWS to filter and structure complex searches.
+
+An example query to find all errors grouped by their source function:
 
 ```text
-fields @timestamp, @message, level
-| filter level = "error"
+fields @timestamp, level, message, awsRequestId, error
+| filter level = "ERROR"
 | sort @timestamp desc
 | limit 20
 ```
