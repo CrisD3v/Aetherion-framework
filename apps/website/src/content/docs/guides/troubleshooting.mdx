@@ -21,7 +21,7 @@ If you run into issues while building with Aetherion, check the common scenarios
 **Cause:** API Gateway is rejecting the request before it reaches your Lambda.
 
 **Solution:**
-1. Ensure the HTTP method and path exactly match what is defined in your `@Get()` or `@Post()` decorators.
+1. Ensure the HTTP method and path exactly match what is defined in your `@Route()` decorators.
 2. If you are using API Keys or IAM Auth, ensure the client is sending the appropriate tokens.
 
 ## Cold Starts are Too Slow

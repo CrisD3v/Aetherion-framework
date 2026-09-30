@@ -8,7 +8,7 @@ description: Evita errores comunes al desplegar en AWS.
 Asegúrate de no importar todo el SDK de AWS de golpe (evita `import AWS from 'aws-sdk'`). Adicionalmente, verifica que no estés usando de forma excesiva el `Scope.REQUEST` en tus servicios inyectables, ya que esto forzará la creación de instancias en cada llamada.
 
 **Error: 403 Forbidden desde API Gateway**
-Asegúrate de que el método HTTP y la ruta coincidan exactamente con lo definido en tus decoradores `@Get()` o `@Post()`.
+Asegúrate de que el método HTTP y la ruta coincidan exactamente con lo definido en tus decoradores `@Route()`.
 
 **Error: Falló la síntesis de CDKTF**
 Ejecuta `tsc --noEmit` localmente para asegurarte de que no hay errores de sintaxis en TypeScript antes de desplegar.

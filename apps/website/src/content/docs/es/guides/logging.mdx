@@ -10,14 +10,15 @@ Aetherion provee un logger JSON estructurado (`@aetherionfw/logger`) ideal para 
 Puedes inyectar el logger del framework directamente en tus controladores o servicios. El logger adjunta automáticamente el contexto de ejecución, incluyendo variables nativas de AWS Lambda como el ID de trazabilidad (`_X_AMZN_TRACE_ID`) y el nombre de la función (`AWS_LAMBDA_FUNCTION_NAME`).
 
 ```typescript
-import { Controller, Get } from '@aetherionfw/core';
+import { LambdaController, Route, Handle } from '@aetherionfw/core';
 import { Logger, ILogger } from '@aetherionfw/logger';
 
-@Controller('/users')
+@LambdaController({ lambdaName: 'user-api' })
 export class UserController {
   constructor(@Logger() private readonly logger: ILogger) {}
 
-  @Get('/')
+  @Handle()
+  @Route({ method: 'GET', path: '/' })
   async getUsers() {
     this.logger.info('Obteniendo usuarios de la base de datos');
   }

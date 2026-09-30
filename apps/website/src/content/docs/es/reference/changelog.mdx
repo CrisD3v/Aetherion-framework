@@ -32,4 +32,4 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 - **Infra:** El "Event Source Mapping" de SQS ahora utiliza correctamente el ARN real de la cola en vez de un string estático.
 - **Infra:** Se genera un archivo `dummy.zip` local mediante `@cdktf/provider-archive` durante la síntesis para resolver los requisitos fuente del Lambda antes de compilar.
 - **Core:** Se solucionaron los registros de rutas duplicadas al agregar validaciones directas dentro del decorador `@Route`.
-- **Core:** Se añadió una validación durante el "synth-time" asegurando que todos los gateways de `@Controller` realmente apunten a un recurso `@ApiGateway` de infraestructura declarado.
+- **Core:** Se añadió una validación durante el "synth-time" asegurando que todos los gateways de `@LambdaController` realmente apunten a un recurso `@ApiGateway` de infraestructura declarado.

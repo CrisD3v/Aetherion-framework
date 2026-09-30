@@ -10,14 +10,15 @@ Standard `console.log` statements in AWS Lambda can be difficult to parse and se
 You can inject the framework logger directly into your services and controllers. The logger automatically attaches contextual execution data, including native AWS Lambda variables such as the trace ID (`_X_AMZN_TRACE_ID`) and the function name (`AWS_LAMBDA_FUNCTION_NAME`).
 
 ```typescript
-import { Controller, Get } from '@aetherionfw/core';
+import { LambdaController, Route, Handle } from '@aetherionfw/core';
 import { Logger, ILogger } from '@aetherionfw/logger';
 
-@Controller('/users')
+@LambdaController({ lambdaName: 'user-api' })
 export class UserController {
   constructor(@Logger() private readonly logger: ILogger) {}
 
-  @Get('/')
+  @Handle()
+  @Route({ method: 'GET', path: '/' })
   async getUsers() {
     this.logger.info('Fetching all users from the database');
   }

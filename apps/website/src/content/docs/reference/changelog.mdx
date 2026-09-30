@@ -32,4 +32,4 @@ All notable changes to this project will be documented in this file.
 - **Infra:** SQS Event Source Mapping now correctly uses the real queue ARN instead of a hardcoded string.
 - **Infra:** Generated a local `dummy.zip` via `@cdktf/provider-archive` during synthesis to fix Lambda source requirements before build.
 - **Core:** Fixed duplicated route registrations by adding validations directly into the `@Route` decorator.
-- **Core:** Added synth-time validation ensuring all `@Controller` gateways actually point to a declared `@ApiGateway` infra resource.
+- **Core:** Added synth-time validation ensuring all `@LambdaController` gateways actually point to a declared `@ApiGateway` infra resource.
