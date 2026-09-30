@@ -1,0 +1,20 @@
+{
+  "name": "@aetherionfw/logger",
+  "version": "1.2.0",
+  "description": "Structured JSON logging for Aetherion Framework",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@aetherionfw/core": "workspace:*",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "rimraf": "^5.0.0",
+    "@types/node": "^20.19.43"
+  }
+}
