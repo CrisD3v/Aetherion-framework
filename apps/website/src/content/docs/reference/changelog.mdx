@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - **Core:** New `build` config section in `AetherionConfig` for controlling the TypeScript compilation and bundling pipeline.
 - **Core:** New `backend` config section in `AetherionConfig` for configuring S3 + DynamoDB Terraform remote state and locking.
 - **Infra:** S3 Backend support with DynamoDB state locking, preventing state corruption when multiple developers deploy simultaneously.
+- **CLI/Workspace:** Added workspace isolation! All generated artifacts, builds, bundles (`.zip`), and `cdktf.out` (including Terraform state backups) are now hidden cleanly inside the `.aetherion` directory. Your root directory stays clean and clutter-free. `aetherion init` now automatically generates a `.gitignore` specifically ignoring `.aetherion`.
 
 ### Fixed
 - **Infra:** (FIX-001) Lambda functions now use `app.zip` from the project root instead of a `dummy.zip` placeholder when available. The framework detects and uses the real application bundle automatically.
@@ -22,6 +23,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **CLI/Deploy:** The build step in `aetherion deploy` now runs the full native bundle pipeline (tsc → esbuild → zip) instead of a generic `npm run build`.
+- **Architecture:** Transitioned to a true 1:1 Lambda Architecture! `aetherion bundle` now evaluates the AST, isolates decorators, and packages each controller method into a completely independent tiny `.zip` file.
+- **Core/Env:** Enforced Least Privilege Environment Variables. The framework now aggressively filters `process.env` during deployment, injecting only the exact variables requested in `envKeys` into each Lambda.
 - All packages bumped to version 1.3.0.
 
 ## [1.2.0] - 2026-09-30

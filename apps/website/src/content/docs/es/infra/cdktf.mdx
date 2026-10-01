@@ -11,7 +11,8 @@ Aetherion usa el **Cloud Development Kit for Terraform (CDKTF)** como motor suby
 1. **Análisis AST:** Analiza tu código fuente y su Árbol de Sintaxis Abstracta (AST).
 2. **Extracción de Metadatos:** Recolecta información de decoradores como `@LambdaController`, `@Route`, y `@IamPermissions`.
 3. **Síntesis:** Construye recursos de Terraform en memoria mapeando tu código a la API de AWS.
-4. **Despliegue:** Ejecuta `terraform apply` en segundo plano.
+4. **Aislamiento:** Todos los artefactos (`cdktf.out`, `terraform.tfstate`, `.terraform.lock.hcl` y los bundles `.zip`) se guardan directamente en una carpeta oculta `.aetherion` para mantener tu directorio de proyecto completamente limpio.
+5. **Despliegue:** Ejecuta `terraform apply` en segundo plano utilizando el estado aislado.
 
 ## Escapando la Abstracción
 

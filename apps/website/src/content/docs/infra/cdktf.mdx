@@ -19,7 +19,8 @@ When you run `aetherion deploy`, the framework performs the following steps:
 1. **AST Parsing:** It scans your `src/` directory and parses the TypeScript Abstract Syntax Tree.
 2. **Metadata Extraction:** It extracts all the metadata from your decorators (`@LambdaController`, `@Route`, `@SqsTrigger`, `@IamPermissions`).
 3. **CDKTF Synthesis:** It programmatically builds a CDKTF `App` and `Stack` in memory, mapping your decorators to Terraform AWS Provider resources (`aws_lambda_function`, `aws_api_gateway_rest_api`, `aws_iam_role`, etc.).
-4. **Terraform Apply:** It invokes CDKTF to synthesize the JSON config and runs `terraform apply` under the hood.
+4. **Workspace Isolation:** All synthesized artifacts (`cdktf.out`, `terraform.tfstate`, `.terraform.lock.hcl`, and `.zip` bundles) are saved directly into a hidden `.aetherion` folder to keep your root project directory completely clean.
+5. **Terraform Apply:** It invokes CDKTF to synthesize the JSON config and runs `terraform apply` under the hood using the isolated state.
 
 ## Zero-Drift Architecture
 

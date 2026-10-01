@@ -13,6 +13,7 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 - **Core:** Nueva sección `build` en `AetherionConfig` para controlar la compilación de TypeScript y el pipeline de empaquetado.
 - **Core:** Nueva sección `backend` en `AetherionConfig` para configurar estado remoto de Terraform con S3 + DynamoDB state locking.
 - **Infra:** Soporte para S3 Backend con DynamoDB state locking, previniendo corrupción de estado cuando múltiples desarrolladores despliegan simultáneamente.
+- **CLI/Workspace:** ¡Aislamiento de espacio de trabajo! Todos los artefactos generados, builds, bundles (`.zip`) y `cdktf.out` (incluyendo backups de Terraform) ahora se ocultan limpiamente dentro de la carpeta `.aetherion`. Tu directorio raíz se mantiene limpio y sin basura. `aetherion init` ahora genera automáticamente un `.gitignore` que ignora `.aetherion`.
 
 ### Solucionado
 - **Infra:** (FIX-001) Las funciones Lambda ahora usan `app.zip` del proyecto en vez del placeholder `dummy.zip` cuando está disponible.
@@ -22,6 +23,8 @@ Todos los cambios notables de este proyecto se documentarán en este archivo.
 
 ### Cambiado
 - **CLI/Deploy:** El paso de compilación en `aetherion deploy` ahora ejecuta el pipeline nativo completo (tsc → esbuild → zip) en vez de un genérico `npm run build`.
+- **Arquitectura:** ¡Transición a una verdadera Arquitectura Lambda 1:1! `aetherion bundle` ahora evalúa el AST, aísla los decoradores y empaqueta cada método controlador en un minúsculo `.zip` completamente independiente.
+- **Core/Env:** Variables de Entorno con Menor Privilegio (Least Privilege). El framework ahora filtra agresivamente `process.env` durante el despliegue, inyectando únicamente las variables explícitamente solicitadas en `envKeys` dentro de cada Lambda.
 - Todos los paquetes actualizados a la versión 1.3.0.
 
 ## [1.2.0] - 2026-09-30
