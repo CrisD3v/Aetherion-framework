@@ -56,6 +56,31 @@ AETHERION_STAGE=dev
 
 Al inicializar un proyecto con `aetherion init`, el framework generará automáticamente los archivos `.env` y `.env.example` con las variables requeridas. El uso de variables de entorno facilita la sobreescritura de la configuración en flujos de CI/CD sin necesidad de modificar el código fuente.
 
+### Inyección de Variables con Menor Privilegio (Least Privilege)
+
+Para cumplir estrictamente con las mejores prácticas de seguridad, **Aetherion no expone todas las variables del `.env` a cada función Lambda por defecto**. Si tu proyecto tiene 50 variables de entorno, inyectarlas todas en un endpoint público expondría una gran superficie de ataque. Además, AWS Lambdas cuenta con un límite estricto de 4KB para las variables de entorno.
+
+En su lugar, Aetherion utiliza un mecanismo explícito de inyección de **Menor Privilegio** a través de la propiedad `envKeys` en tus decoradores:
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+
+@LambdaController({
+  lambdaName: 'payment-api',
+  envKeys: ['STRIPE_SECRET_KEY'] // Sólo inyecta esta variable específica
+})
+export class PaymentController {
+  
+  @Handle({ envKeys: ['STRIPE_SECRET_KEY', 'WEBHOOK_SECRET'] }) // Sobrescribir por handler si es necesario
+  @Route({ method: 'POST', path: '/webhook' })
+  async handleWebhook() {
+    // Procesar webhook
+  }
+}
+```
+
+Durante la síntesis (`aetherion deploy`), el framework buscará estas llaves en el `process.env` (que ha sido poblado por el `.env` local o por el runner en el CI/CD) y empaquetará **únicamente** esas variables específicas en la configuración de Terraform resultante para esa Lambda concreta.
+
 ## Validar Configuración
 
 Antes de intentar un despliegue, puedes usar el comando `validate` para asegurar que todas las precondiciones, archivos `.env`, y construcciones existen y están correctos:

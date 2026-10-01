@@ -56,6 +56,31 @@ AETHERION_STAGE=dev
 
 When initializing a project with `aetherion init`, the framework will automatically generate the `.env` and `.env.example` files with the required variables. Using environment variables makes it easy to override the configuration in CI/CD pipelines without modifying the code.
 
+### Least Privilege Environment Injection
+
+To strictly enforce security best practices, **Aetherion does not expose all `.env` variables to every Lambda function by default**. If your project has 50 environment variables, injecting all of them into a public-facing endpoint exposes a massive attack surface. Additionally, AWS Lambdas have a 4KB limit on environment variables.
+
+Instead, Aetherion uses an explicit **Least Privilege** injection mechanism via the `envKeys` property in your decorators:
+
+```typescript
+import { LambdaController, Handle, Route } from '@aetherionfw/core';
+
+@LambdaController({
+  lambdaName: 'payment-api',
+  envKeys: ['STRIPE_SECRET_KEY'] // Only injects this specific variable
+})
+export class PaymentController {
+  
+  @Handle({ envKeys: ['STRIPE_SECRET_KEY', 'WEBHOOK_SECRET'] }) // Override per-handler if needed
+  @Route({ method: 'POST', path: '/webhook' })
+  async handleWebhook() {
+    // Process webhook
+  }
+}
+```
+
+During synthesis (`aetherion deploy`), the framework will look for these keys in `process.env` (populated by `.env` locally or by your CI/CD runner) and bundle **only** those specific variables into the resulting Terraform configuration for each Lambda.
+
 ## Validating Configuration
 
 Before attempting to deploy, you can use the `validate` command to ensure all preconditions, `.env` files, and builds exist and are correct:

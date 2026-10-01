@@ -21,6 +21,7 @@ Marca una clase como un controlador serverless y define las propiedades de AWS L
 - `timeout` (number): El tiempo máximo de ejecución en segundos.
 - `layers` (string[]): Arreglo de ARNs de Lambda Layers a adjuntar.
 - `apiGateway` (string): El nombre lógico del API Gateway al que enlazar las rutas.
+- `envKeys` (string[]): Lista de llaves de variables de entorno a inyectar en las Lambdas de este controlador (Least Privilege).
 
 ```typescript
 @LambdaController({
@@ -35,9 +36,9 @@ export class UserController {}
 ### `@Handle()`
 Marca un método como el punto de entrada para la invocación de la Lambda.
 
-**Firma**: `@Handle(options?: { timeout?: number; memorySize?: number })`
+**Firma**: `@Handle(options?: { timeout?: number; memorySize?: number; envKeys?: string[] })`
 
-*Nota: Sobreescribe el `timeout` o `memorySize` definido a nivel del controlador.*
+*Nota: Sobreescribe el `timeout`, `memorySize` o `envKeys` definido a nivel del controlador.*
 
 ### `@Route()`
 Enlaza el método a una ruta de API Gateway.

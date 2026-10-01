@@ -21,6 +21,7 @@ Marks a class as a serverless controller and defines the AWS Lambda properties.
 - `timeout` (number): The function execution timeout in seconds.
 - `layers` (string[]): Array of ARNs for Lambda layers to attach.
 - `apiGateway` (string): The logical name of the API Gateway to bind the routes to.
+- `envKeys` (string[]): List of environment variable keys to inject into this controller's Lambdas (Least Privilege).
 
 ```typescript
 @LambdaController({
@@ -35,9 +36,9 @@ export class UserController {}
 ### `@Handle()`
 Marks a method as the entry point for the Lambda invocation.
 
-**Signature**: `@Handle(options?: { timeout?: number; memorySize?: number })`
+**Signature**: `@Handle(options?: { timeout?: number; memorySize?: number; envKeys?: string[] })`
 
-*Note: Overrides the `timeout` or `memorySize` defined at the controller level.*
+*Note: Overrides the `timeout`, `memorySize`, or `envKeys` defined at the controller level.*
 
 ### `@Route()`
 Binds the method to an API Gateway route.
