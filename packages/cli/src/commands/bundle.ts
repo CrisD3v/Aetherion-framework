@@ -102,7 +102,7 @@ export async function bundleCommand() {
   }
 
   // Determine build directories
-  const buildDir = path.resolve(process.cwd(), '.aetherion-build');
+  const buildDir = path.resolve(process.cwd(), '.aetherion/build');
   if (fs.existsSync(buildDir)) {
     fs.rmSync(buildDir, { recursive: true, force: true });
   }
@@ -195,6 +195,6 @@ exports.handler = async (event, context) => {
     }
   }
 
-  console.log(chalk.green(`\n✅ 1:1 Architecture complete. Generated ${totalBundles} Lambda bundles in .aetherion-build/`));
+  console.log(chalk.green(`\n✅ 1:1 Architecture complete. Generated ${totalBundles} Lambda bundles in .aetherion/build/`));
 }
 

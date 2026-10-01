@@ -65,6 +65,13 @@ AETHERION_STAGE=dev
     await fs.writeFile(path.join(projectPath, '.env.example'), envContent);
     await fs.writeFile(path.join(projectPath, '.env'), envContent);
 
+    const gitignoreContent = `node_modules
+dist
+.env
+.aetherion
+`;
+    await fs.writeFile(path.join(projectPath, '.gitignore'), gitignoreContent);
+
     spinner.succeed(`Project ${chalk.green(projectName)} created successfully.`);
     console.log(chalk.blue(`\nNext steps:`));
     console.log(`  $ cd ${projectName}`);

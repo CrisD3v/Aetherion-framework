@@ -87,7 +87,7 @@ export async function deployCommand(options: any) {
       process.exit(1);
     }
 
-    const stackPath = path.resolve(process.cwd(), 'cdktf.out/stacks', stackName);
+    const stackPath = path.resolve(process.cwd(), '.aetherion/cdktf.out/stacks', stackName);
     if (!fs.existsSync(stackPath)) {
       console.error(chalk.red(`\nError: Stack directory not found at ${stackPath}`));
       process.exit(1);

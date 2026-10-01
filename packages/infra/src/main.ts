@@ -28,7 +28,7 @@ const stackName = config.projectName ? `${config.projectName}-${config.stage || 
 
 export function synthApp(config: any) {
   const stackName = config.projectName ? `${config.projectName}-${config.stage || 'dev'}` : 'aetherion-dev';
-  const app = new App();
+  const app = new App({ outdir: '.aetherion/cdktf.out' });
   new FrameworkStack(app, stackName);
   app.synth();
 }

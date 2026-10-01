@@ -44,20 +44,21 @@ export async function synthCommand() {
       synthApp(${JSON.stringify(config)});
     `;
     
-    fs.writeFileSync(path.resolve(process.cwd(), '.aetherion-build/synth.js'), infraRunner);
-    execSync(`node .aetherion-build/synth.js`, { stdio: 'pipe', cwd: process.cwd() });
+    fs.mkdirSync(path.resolve(process.cwd(), '.aetherion'), { recursive: true });
+    fs.writeFileSync(path.resolve(process.cwd(), '.aetherion/synth.js'), infraRunner);
+    execSync(`node .aetherion/synth.js`, { stdio: 'pipe', cwd: process.cwd() });
     
     // DX-006: Auto-generate cdktf.json just in case they want to use cdktf CLI manually
     const cdktfConfig = {
       language: "typescript",
-      app: `node .aetherion-build/synth.js`,
+      app: `node .aetherion/synth.js`,
       projectId: config.projectName || "aetherion-project",
       terraformProviders: ["hashicorp/aws@~> 5.0", "hashicorp/archive@~> 2.0"],
-      output: "cdktf.out",
+      output: ".aetherion/cdktf.out",
     };
-    fs.writeFileSync(path.resolve(process.cwd(), 'cdktf.json'), JSON.stringify(cdktfConfig, null, 2));
+    fs.writeFileSync(path.resolve(process.cwd(), '.aetherion/cdktf.json'), JSON.stringify(cdktfConfig, null, 2));
 
-    spinner.succeed(chalk.green('Infrastructure synthesized successfully to cdktf.out/'));
+    spinner.succeed(chalk.green('Infrastructure synthesized successfully to .aetherion/cdktf.out/'));
   } catch (err: any) {
     spinner.fail(chalk.red('Synthesis failed.'));
     console.error(err.stdout?.toString() || err.stderr?.toString() || err.message);
