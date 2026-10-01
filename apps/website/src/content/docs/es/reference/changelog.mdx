@@ -5,6 +5,25 @@ description: Registro de cambios y actualizaciones del framework Aetherion.
 
 Todos los cambios notables de este proyecto se documentarán en este archivo.
 
+## [1.3.0] - 2026-10-01
+
+### Añadido
+- **CLI:** Nuevo comando `aetherion bundle` que proporciona un pipeline de empaquetado nativo: `tsc` → generación de entry point → `esbuild` → `archiver` (zip).
+- **CLI/Deploy:** Validación automática de credenciales AWS (`check-env`) se ejecuta antes de la síntesis, abortando tempranamente si faltan credenciales.
+- **Core:** Nueva sección `build` en `AetherionConfig` para controlar la compilación de TypeScript y el pipeline de empaquetado.
+- **Core:** Nueva sección `backend` en `AetherionConfig` para configurar estado remoto de Terraform con S3 + DynamoDB state locking.
+- **Infra:** Soporte para S3 Backend con DynamoDB state locking, previniendo corrupción de estado cuando múltiples desarrolladores despliegan simultáneamente.
+
+### Solucionado
+- **Infra:** (FIX-001) Las funciones Lambda ahora usan `app.zip` del proyecto en vez del placeholder `dummy.zip` cuando está disponible.
+- **Infra:** (FIX-002) Se añadió `sourceCodeHash` a todos los recursos `aws_lambda_function`. Terraform ahora detecta correctamente los cambios de código y actualiza las Lambdas en despliegues posteriores.
+- **CLI:** (FIX-003) El comando deploy ahora usa el pipeline de empaquetado nativo en vez de delegar a `npm run build`, que previamente eliminaba los metadatos de decoradores cuando se usaba `esbuild` directamente sobre el código TypeScript.
+- **CLI:** (FIX-003) Entry point de Lambda autogenerado con enrutamiento `AETHERION_TARGET_CLASS`. Los usuarios ya no necesitan crear manualmente un archivo `index.ts` de enrutamiento — el framework lo genera durante el paso de empaquetado.
+
+### Cambiado
+- **CLI/Deploy:** El paso de compilación en `aetherion deploy` ahora ejecuta el pipeline nativo completo (tsc → esbuild → zip) en vez de un genérico `npm run build`.
+- Todos los paquetes actualizados a la versión 1.3.0.
+
 ## [1.2.0] - 2026-09-30
 
 ### Añadido

@@ -10,13 +10,14 @@ import { checkEnvCommand } from '../commands/check-env';
 import { validateCommand } from '../commands/validate';
 import { destroyCommand } from '../commands/destroy';
 import { statusCommand } from '../commands/status';
+import { bundleCommand } from '../commands/bundle';
 
 const program = new Command();
 
 program
   .name('aetherion')
   .description(chalk.blue('Aetherion Serverless Framework CLI'))
-  .version('1.2.0');
+  .version('1.3.0');
 
 program
   .command('init <project-name>')
@@ -61,6 +62,11 @@ program
   .command('check-env')
   .description('Verify AWS credentials and connection using STS GetCallerIdentity')
   .action(checkEnvCommand);
+
+program
+  .command('bundle')
+  .description('Bundle the project for Lambda deployment (tsc → esbuild → zip)')
+  .action(bundleCommand);
 
 program.parse(process.argv);
 

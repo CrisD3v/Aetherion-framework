@@ -26,6 +26,11 @@ function loadConfig() {
 const config = loadConfig();
 const stackName = config.projectName ? `${config.projectName}-${config.stage || 'dev'}` : 'aetherion-dev';
 
-const app = new App();
-new FrameworkStack(app, stackName);
-app.synth();
+export function synthApp(config: any) {
+  const stackName = config.projectName ? `${config.projectName}-${config.stage || 'dev'}` : 'aetherion-dev';
+  const app = new App();
+  new FrameworkStack(app, stackName);
+  app.synth();
+}
+
+export { FrameworkStack };

@@ -5,6 +5,25 @@ description: Record of changes and updates for the Aetherion Framework.
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-10-01
+
+### Added
+- **CLI:** New `aetherion bundle` command that provides a native bundling pipeline: `tsc` → entry point generation → `esbuild` → `archiver` (zip).
+- **CLI/Deploy:** Automatic AWS credentials validation (`check-env`) runs before synthesis, aborting early if credentials are missing.
+- **Core:** New `build` config section in `AetherionConfig` for controlling the TypeScript compilation and bundling pipeline.
+- **Core:** New `backend` config section in `AetherionConfig` for configuring S3 + DynamoDB Terraform remote state and locking.
+- **Infra:** S3 Backend support with DynamoDB state locking, preventing state corruption when multiple developers deploy simultaneously.
+
+### Fixed
+- **Infra:** (FIX-001) Lambda functions now use `app.zip` from the project root instead of a `dummy.zip` placeholder when available. The framework detects and uses the real application bundle automatically.
+- **Infra:** (FIX-002) Added `sourceCodeHash` to all `aws_lambda_function` resources. Terraform now correctly detects code changes and updates Lambda functions on subsequent deploys.
+- **CLI:** (FIX-003) The deploy command now uses the native bundle pipeline instead of delegating to `npm run build`, which previously broke decorator metadata when using `esbuild` directly on TypeScript source.
+- **CLI:** (FIX-003) Auto-generated Lambda entry point with `AETHERION_TARGET_CLASS` routing. Users no longer need to manually create an `index.ts` router — the framework generates it during the bundle step.
+
+### Changed
+- **CLI/Deploy:** The build step in `aetherion deploy` now runs the full native bundle pipeline (tsc → esbuild → zip) instead of a generic `npm run build`.
+- All packages bumped to version 1.3.0.
+
 ## [1.2.0] - 2026-09-30
 
 ### Added

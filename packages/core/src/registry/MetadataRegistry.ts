@@ -24,6 +24,11 @@ export interface ControllerMetadata {
    * These override project-level `lambdaDefaults.envVars` but are overridden by framework vars.
    */
   envVars?: Record<string, string>;
+  /**
+   * Keys of environment variables to extract from process.env or lambdaDefaults.envVars.
+   * Promotes least privilege by injecting ONLY the requested keys into the Lambda.
+   */
+  envKeys?: string[];
 }
 
 export interface RouteMetadata {
@@ -37,6 +42,7 @@ export interface HandleMetadata {
   methodName: string;
   timeout?: number;
   memorySize?: number;
+  envKeys?: string[];
 }
 
 export interface IamPermissionMetadata {

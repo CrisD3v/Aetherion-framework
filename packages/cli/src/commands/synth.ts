@@ -27,23 +27,30 @@ export async function synthCommand() {
   
   try {
     const config = loadConfig();
-    const entrypoint = config.build?.entrypoint || 'dist/infra/main.js';
-    const entryPath = path.resolve(process.cwd(), entrypoint);
+    const buildDir = path.resolve(process.cwd(), 'dist/src');
+    const distDir = fs.existsSync(buildDir) ? buildDir : path.resolve(process.cwd(), 'dist');
+    const appModulePath = path.join(distDir, 'app.module.js');
 
-    if (!fs.existsSync(entryPath)) {
-      // Fallback: maybe they haven't built yet, try to run ts-node if available, or just throw
-      spinner.fail(`Entrypoint not found at ${entryPath}. Please run 'npm run build' first.`);
+    if (!fs.existsSync(appModulePath)) {
+      spinner.fail(`app.module.js not found at ${appModulePath}. Please run 'npm run build' first.`);
       process.exit(1);
     }
 
-    // ARCH-001: Bypass cdktf CLI completely. Just execute the entrypoint directly.
-    // The entrypoint calls app.synth() which generates cdktf.out locally.
-    execSync(`node ${entryPath}`, { stdio: 'pipe', cwd: process.cwd() });
+    // ARCH-001: Bypass cdktf CLI completely. Just execute the built-in infra entrypoint.
+    // We execute it dynamically to ensure it uses the user's config and compiled app.module.
+    const infraRunner = `
+      require('${appModulePath.replace(/\\/g, '/')}');
+      const { synthApp } = require('@aetherionfw/infra');
+      synthApp(${JSON.stringify(config)});
+    `;
+    
+    fs.writeFileSync(path.resolve(process.cwd(), '.aetherion-build/synth.js'), infraRunner);
+    execSync(`node .aetherion-build/synth.js`, { stdio: 'pipe', cwd: process.cwd() });
     
     // DX-006: Auto-generate cdktf.json just in case they want to use cdktf CLI manually
     const cdktfConfig = {
       language: "typescript",
-      app: `node ${entrypoint}`,
+      app: `node .aetherion-build/synth.js`,
       projectId: config.projectName || "aetherion-project",
       terraformProviders: ["hashicorp/aws@~> 5.0", "hashicorp/archive@~> 2.0"],
       output: "cdktf.out",

@@ -46,24 +46,40 @@ export async function deployCommand(options: any) {
   console.log();
 
   try {
-    // 1. Build
+    // 1. Build & Bundle (native pipeline)
     if (!skipBuild) {
-      const buildSpinner = ora('Building TypeScript project...').start();
+      const buildSpinner = ora('Running native bundle pipeline (tsc → esbuild → zip)...').start();
       try {
-        execSync('npm run build', { stdio: 'pipe' });
-        buildSpinner.succeed('TypeScript project built successfully');
+        // FIX-003: Use the native bundler instead of delegating to npm run build
+        const { bundleCommand } = require('./bundle');
+        buildSpinner.stop();
+        await bundleCommand();
       } catch (e: any) {
-        buildSpinner.fail('Build failed');
+        buildSpinner.fail('Bundle pipeline failed');
         console.error(e.message);
         process.exit(1);
       }
     }
 
+    // 1.5 Auto env-validation (DX-004: run check-env before synth)
+    const envSpinner = ora('Validating AWS credentials...').start();
+    try {
+      const { STSClient, GetCallerIdentityCommand } = require('@aws-sdk/client-sts');
+      const stsClient = new STSClient({ region: config.region || 'us-east-1' });
+      await stsClient.send(new GetCallerIdentityCommand({}));
+      envSpinner.succeed('AWS credentials validated');
+    } catch (e: any) {
+      envSpinner.fail('AWS credentials check failed');
+      console.error(chalk.red('  Could not verify AWS credentials. Run `aetherion check-env` for details.'));
+      console.error(chalk.dim(`  Error: ${e.message}`));
+      process.exit(1);
+    }
+
     // 2. Pre-deploy checks & Synth
     const synthSpinner = ora('Synthesizing CDKTF infrastructure...').start();
     try {
-      // Synth using aetherion synth (which wraps cdktf synth)
-      execSync('npx aetherion synth', { stdio: 'pipe', cwd: process.cwd() });
+      // Synth using the current executing aetherion binary
+      execSync(`node "${process.argv[1]}" synth`, { stdio: 'pipe', cwd: process.cwd() });
       synthSpinner.succeed('Infrastructure synthesized successfully');
     } catch (e: any) {
       synthSpinner.fail('Synthesis failed');
@@ -150,6 +166,9 @@ export async function deployCommand(options: any) {
     } catch (e) {
       // Ignore tfstate parsing errors
     }
+
+    console.log(chalk.green('\n✨ Deploy completed cleanly.'));
+    process.exit(0);
 
   } catch (err: any) {
     console.error(chalk.red('\nDeploy pipeline failed.'));

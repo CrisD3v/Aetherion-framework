@@ -37,12 +37,13 @@ export async function initCommand(projectName: string) {
         "test": "vitest run"
       },
       dependencies: {
-        "@aetherionfw/core": "^1.2.0",
-        "@aetherionfw/infra": "^1.2.0",
-        "@aetherionfw/docs": "^1.2.0"
+        "@aetherionfw/core": "^1.3.0",
+        "@aetherionfw/infra": "^1.3.0",
+        "@aetherionfw/docs": "^1.3.0",
+        "dotenv": "^16.4.5"
       },
       devDependencies: {
-        "@aetherionfw/cli": "^1.2.0",
+        "@aetherionfw/cli": "^1.3.0",
         "typescript": "^5.5.4",
         "vitest": "^2.0.5"
       }

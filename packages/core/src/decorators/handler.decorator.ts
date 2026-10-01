@@ -20,12 +20,13 @@ export function Route(metadata: Omit<RouteMetadata, 'methodName'>): MethodDecora
   };
 }
 
-export function Handle(options?: { timeout?: number; memorySize?: number }): MethodDecorator {
+export function Handle(options?: { timeout?: number; memorySize?: number; envKeys?: string[] }): MethodDecorator {
   return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
     MetadataRegistry.getInstance().registerHandle(target.constructor, {
       methodName: String(propertyKey),
       timeout: options?.timeout,
       memorySize: options?.memorySize,
+      envKeys: options?.envKeys,
     });
     Reflect.defineMetadata('handle', options || true, target, propertyKey);
   };

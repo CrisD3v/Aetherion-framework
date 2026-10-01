@@ -58,6 +58,41 @@ export interface AetherionConfig {
      */
     envVars?: Record<string, string>;
   };
+
+  /**
+   * Build pipeline configuration.
+   * Controls how the framework compiles and bundles your TypeScript code.
+   */
+  build?: {
+    /** Path to tsconfig.json relative to project root. @default 'tsconfig.json' */
+    tsconfig?: string;
+    /** CDKTF/Infra entrypoint path (compiled JS). @default 'dist/infra/main.js' */
+    entrypoint?: string;
+  };
+
+  /**
+   * Terraform backend configuration for remote state.
+   * When set, the framework configures an S3 backend with DynamoDB state locking,
+   * preventing state conflicts when multiple developers deploy simultaneously.
+   *
+   * @example
+   * ```typescript
+   * backend: {
+   *   bucket: 'my-terraform-state-bucket',
+   *   dynamodbTable: 'terraform-locks',
+   * }
+   * ```
+   */
+  backend?: {
+    /** S3 bucket name for storing terraform.tfstate */
+    bucket: string;
+    /** Key prefix in the bucket. @default 'terraform/<projectName>/<stage>/terraform.tfstate' */
+    key?: string;
+    /** DynamoDB table name for state locking. */
+    dynamodbTable: string;
+    /** Region for the backend resources. Falls back to the main region if not specified. */
+    region?: string;
+  };
 }
 
 /**
